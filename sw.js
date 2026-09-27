@@ -1,5 +1,5 @@
-// Sube este número cada vez que cambies la lista ASSETS.
-const CACHE_NAME = 'menu-semanal-v2';
+// Sube este número cada vez que cambies la lista ASSETS o sustituyas iconos/fuentes.
+const CACHE_NAME = 'menu-semanal-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -23,12 +23,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Stale-while-revalidate: responde al instante desde la caché (funciona sin conexión)
-// y, si hay internet, descarga la versión nueva en segundo plano para el siguiente arranque.
-// Así, si actualizas index.html en GitHub, la app instalada lo recoge sola.
+// Iconos y fuentes no cambian: se sirven siempre desde la caché, sin volver a descargarlos.
+const STATIC = /\.(png|woff2)$/;
+
+// El resto (index.html, manifest): responde al instante desde la caché (funciona sin conexión)
+// y, solo mientras la app está abierta y hay internet, descarga la versión nueva en segundo plano
+// para el siguiente arranque (~100 KB por apertura). Con la app cerrada no hace nada.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (STATIC.test(url.pathname)) {
+    event.respondWith(caches.match(req).then((cached) => cached || fetch(req)));
+    return;
+  }
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
       cache.match(req, { ignoreSearch: true }).then((cached) => {

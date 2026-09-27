@@ -236,6 +236,18 @@
   .dish-list-item .name{font-weight:800;font-size:0.92rem;}
   .dish-list-item .ings{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;}
   .dish-list-item .season-tag{font-size:0.68rem;color:var(--ink-soft);margin-top:2px;font-style:italic;}
+  .bal-verdict{border-radius:14px;padding:10px 12px;font-weight:800;font-size:0.92rem;margin-bottom:14px;border:1.5px solid var(--line);background:var(--paper-card);}
+  .bal-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .bal-donut{flex:none;width:170px;height:170px;}
+  .bal-legend{flex:1;min-width:160px;display:flex;flex-direction:column;gap:6px;font-size:0.85rem;}
+  .bal-legend .row{display:flex;align-items:center;gap:8px;}
+  .bal-legend .sw{width:12px;height:12px;border-radius:3px;flex:none;}
+  .bal-legend .num{margin-left:auto;font-weight:800;color:var(--ink);}
+  .bal-checks{margin-top:16px;display:flex;flex-direction:column;gap:8px;}
+  .bal-check{display:flex;gap:10px;align-items:flex-start;background:var(--paper-card);border:1.5px solid var(--line);border-radius:12px;padding:9px 11px;font-size:0.86rem;}
+  .bal-check .ic{flex:none;font-size:1rem;line-height:1.2;}
+  .bal-check .t{font-weight:800;}
+  .bal-check .d{color:var(--ink-soft);font-size:0.78rem;margin-top:1px;}
   .del-btn{background:none;color:var(--rojo);font-weight:800;font-size:0.85rem;padding:4px 6px;}
 </style>
 </head>
@@ -246,7 +258,7 @@
     <div class="board-top">
       <div>
         <h1 class="brand">Menú de la semana</h1>
-        <p class="subtitle">Lunes a viernes, sin preguntar cada día</p>
+        <p class="subtitle">Toda la semana, sin preguntar cada día</p>
       </div>
       <div class="season-toggle" id="seasonToggle">
         <span class="opt" data-season="frio">❄️ Frío</span>
@@ -270,6 +282,7 @@
     <button class="btn-ghost" id="prefsBtn">⚙️ Preferencias</button>
     <button class="btn-ghost" id="addDishBtn">➕ Añadir plato</button>
     <button class="btn-ghost" id="shoppingListBtn">🛒 Lista de la compra</button>
+    <button class="btn-ghost" id="balanceBtn">📊 Equilibrio</button>
   </div>
 
   <nav class="day-jump" id="dayJump"></nav>
@@ -292,6 +305,15 @@
       </div>
     </div>
     <div class="field">
+      <label>Legumbre, mínimo veces por semana</label>
+      <div class="stepper" id="legumeStepper">
+        <button data-val="2">2</button>
+        <button data-val="3">3</button>
+        <button data-val="4">4</button>
+      </div>
+      <p class="hint">La AESAN recomienda al menos 4 raciones de legumbre y 3 de pescado a la semana.</p>
+    </div>
+    <div class="field">
       <label>¿Para cuántas personas se cocina?</label>
       <div class="stepper" id="servingsStepper">
         <button data-val="1">1</button>
@@ -305,6 +327,15 @@
       <label>Base de datos de platos</label>
       <button class="btn-ghost" id="openDishesFromPrefs" style="width:100%;">🍽️ Platos</button>
       <p class="hint">Edita las categorías, la temporada o los ingredientes de cada plato, o añade/elimina platos.</p>
+    </div>
+    <div class="field">
+      <label>Copia de seguridad</label>
+      <div class="stepper">
+        <button id="exportBtn">📤 Guardar copia</button>
+        <button id="importBtn">📥 Recuperar copia</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,.txt,application/json,text/plain" style="display:none">
+      <p class="hint">«Guardar copia» crea un archivo con el menú, los platos y las preferencias; puedes enviártelo por WhatsApp o guardarlo en Drive. Si cambias de móvil o se borran los datos, instala la app y pulsa «Recuperar copia».</p>
     </div>
     <div class="modal-actions">
       <button class="btn-primary" id="closePrefs">Hecho</button>
@@ -402,6 +433,17 @@
   </div>
 </div>
 
+<!-- Balance (AESAN) -->
+<div class="overlay" id="balanceOverlay">
+  <div class="sheet">
+    <div class="sheet-header"><h2>Equilibrio de la semana</h2><button class="sheet-close" id="topCloseBalance">✕</button></div>
+    <div id="balanceContent"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="closeBalance">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Shopping list -->
 <div class="overlay" id="shoppingListOverlay">
   <div class="sheet">
@@ -425,14 +467,14 @@
     marron:{label:'Legumbre', emoji:'🫘'},
     morado:{label:'Huevo', emoji:'🥚'}
   };
-  const DAY_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const DAY_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 
   const DEFAULT_DISHES = [
-    {id:"macarrones-tomate", name:"Macarrones a la boloñesa", categories:["amarillo","rojo"], ingredients:[{"name":"macarrones","amount":160,"unit":"g","baseServings":2},{"name":"carne picada (mitad cerdo, mitad ternera)","amount":200,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria pequeña","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], family:"bolonesa",
+    {id:"macarrones-tomate", name:"Macarrones a la boloñesa", categories:["amarillo","rojo"], ingredients:[{"name":"macarrones","amount":160,"unit":"g","baseServings":2},{"name":"carne picada (mitad cerdo, mitad ternera)","amount":200,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria pequeña","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], meat:"roja", family:"bolonesa",
       instructions:"1. Rehogar la cebolla y la zanahoria picadas muy finas hasta que la cebolla esté transparente.\n2. Añadir la carne picada, salpimentar, y cocinar hasta que se dore.\n3. Incorporar el tomate triturado y cocer a fuego bajo unos 20 minutos.\n4. Cocer los macarrones con sal según el paquete, escurrir y mezclar con la salsa."},
     {id:"macarrones-atun", name:"Macarrones con atún", categories:["amarillo","azul"], ingredients:[{"name":"macarrones","amount":160,"unit":"g","baseServings":2},{"name":"atún en lata (escurrido)","amount":1,"unit":"ud","baseServings":2},{"name":"tomate triturado","amount":300,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], cannedFish:true,
       instructions:"1. Rehogar la cebolla picada en aceite hasta que esté blanda.\n2. Añadir el tomate triturado y cocinar 10 minutos a fuego medio.\n3. Incorporar el atún escurrido y mezclar bien, cocinar 2-3 minutos más.\n4. Cocer los macarrones según el paquete, escurrir y mezclar con la salsa."},
-    {id:"espaguetis-bolonesa", name:"Espaguetis a la boloñesa", categories:["amarillo","rojo"], ingredients:[{"name":"espaguetis","amount":160,"unit":"g","baseServings":2},{"name":"carne picada (mitad cerdo, mitad ternera)","amount":200,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria pequeña","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], family:"bolonesa",
+    {id:"espaguetis-bolonesa", name:"Espaguetis a la boloñesa", categories:["amarillo","rojo"], ingredients:[{"name":"espaguetis","amount":160,"unit":"g","baseServings":2},{"name":"carne picada (mitad cerdo, mitad ternera)","amount":200,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria pequeña","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], meat:"roja", family:"bolonesa",
       instructions:"1. Rehogar la cebolla y la zanahoria picadas muy finas hasta que la cebolla esté transparente.\n2. Añadir la carne picada, salpimentar, y cocinar hasta que se dore.\n3. Incorporar el tomate triturado y cocer a fuego bajo unos 20 minutos.\n4. Cocer los espaguetis con sal según el paquete, escurrir y mezclar con la salsa."},
     {id:"arroz-tomate", name:"Arroz con tomate y huevo", categories:["amarillo","morado"], ingredients:[{"name":"arroz","amount":160,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"],
       instructions:"1. Cocer el arroz en agua con sal (el doble de agua que de arroz) hasta que esté en su punto; escurrir.\n2. Rehogar la cebolla en aceite, añadir el tomate triturado y cocinar 10 minutos.\n3. Freír o cocer los huevos por separado.\n4. Servir el arroz con la salsa de tomate y el huevo por encima."},
@@ -440,70 +482,80 @@
       instructions:"1. Mantener el caldo caliente en un cazo aparte, a fuego bajo.\n2. Pochar el ajo y la cebolla picados en aceite; añadir los champiñones troceados y cocinar unos minutos.\n3. Añadir el arroz y rehogar 1-2 minutos hasta que quede translúcido.\n4. Ir incorporando el caldo caliente poco a poco, cucharón a cucharón, esperando a que se absorba antes de añadir más (unos 18 minutos en total), removiendo con frecuencia.\n5. Fuera del fuego, añadir la mantequilla y el queso parmesano y remover hasta que quede cremoso."},
     {id:"gnocchi-verduras", name:"Gnocchi del Día con verduras", categories:["amarillo","verde"], ingredients:[{"name":"paquete de gnocchi del Día con verduras","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
       instructions:"1. Calentar una sartén con un poco de aceite.\n2. Añadir los gnocchi con verduras y saltear a fuego medio el tiempo indicado en el paquete, removiendo de vez en cuando."},
-    {id:"pollo-pure", name:"Filete de pollo con puré de patata", categories:["rojo","amarillo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"leche","amount":100,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":20,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+    {id:"pollo-pure", name:"Filete de pollo con puré de patata", categories:["rojo","amarillo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"leche","amount":100,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":20,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], meat:"ave",
       instructions:"1. Cocer las patatas peladas y troceadas en agua con sal hasta que estén tiernas.\n2. Escurrir y chafarlas con un tenedor o pasapurés; añadir la leche y la mantequilla calientes y mezclar hasta que quede cremoso.\n3. Mientras, salpimentar los filetes de pollo y hacerlos a la plancha con un poco de aceite, 4-5 minutos por cada lado.\n4. Servir el filete con el puré al lado."},
-    {id:"croquetas", name:"Croquetas", categories:["rojo","amarillo"], ingredients:[{"name":"jamón picado","amount":100,"unit":"g","baseServings":2},{"name":"mantequilla","amount":50,"unit":"g","baseServings":2},{"name":"harina","amount":50,"unit":"g","baseServings":2},{"name":"leche","amount":500,"unit":"ml","baseServings":2},{"name":"pan rallado"},{"name":"huevo (para rebozar)","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], mealRestriction:"cena",
+    {id:"croquetas", name:"Croquetas", categories:["rojo","amarillo"], ingredients:[{"name":"jamón picado","amount":100,"unit":"g","baseServings":2},{"name":"mantequilla","amount":50,"unit":"g","baseServings":2},{"name":"harina","amount":50,"unit":"g","baseServings":2},{"name":"leche","amount":500,"unit":"ml","baseServings":2},{"name":"pan rallado"},{"name":"huevo (para rebozar)","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], meat:"procesada", mealRestriction:"cena",
       instructions:"1. Derretir la mantequilla y rehogar el jamón picado un par de minutos.\n2. Añadir la harina y cocinar 1-2 minutos sin dejar de remover.\n3. Verter la leche poco a poco sin dejar de remover hasta obtener una bechamel espesa; cocinar unos 15-20 minutos a fuego bajo.\n4. Dejar enfriar la masa (idealmente varias horas o de un día para otro).\n5. Formar las croquetas y pasarlas por harina, huevo batido y pan rallado.\n6. Freír en aceite bien caliente hasta que estén doradas."},
     {id:"empanadillas-atun", name:"Empanadillas de atún", categories:["azul","amarillo"], ingredients:[{"name":"obleas de empanadilla","amount":8,"unit":"ud","baseServings":2},{"name":"atún en lata","amount":1,"unit":"ud","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"huevo cocido","amount":1,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"empanadillas", cannedFish:true, mealRestriction:"cena",
       instructions:"1. Mezclar el atún escurrido con el tomate frito y el huevo cocido picado.\n2. Rellenar las obleas, doblar y sellar los bordes con un tenedor.\n3. Hornear a 200°C 15-18 minutos, o freír en aceite caliente hasta dorar."},
-    {id:"empanadillas-carne", name:"Empanadillas de carne", categories:["rojo","amarillo"], ingredients:[{"name":"obleas de empanadilla","amount":8,"unit":"ud","baseServings":2},{"name":"carne picada","amount":200,"unit":"g","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"empanadillas", mealRestriction:"cena",
+    {id:"empanadillas-carne", name:"Empanadillas de carne", categories:["rojo","amarillo"], ingredients:[{"name":"obleas de empanadilla","amount":8,"unit":"ud","baseServings":2},{"name":"carne picada","amount":200,"unit":"g","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], meat:"roja", family:"empanadillas", mealRestriction:"cena",
       instructions:"1. Rehogar la cebolla picada y añadir la carne picada hasta que se dore. Mezclar con el tomate frito.\n2. Rellenar las obleas, doblar y sellar los bordes con un tenedor.\n3. Hornear a 200°C 15-18 minutos, o freír en aceite caliente hasta dorar."},
-    {id:"lasana-canelones", name:"Lasaña / Canelones", categories:["amarillo","rojo"], ingredients:[{"name":"láminas de lasaña o canelones","amount":9,"unit":"ud","baseServings":2},{"name":"carne picada","amount":400,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"leche","amount":500,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":40,"unit":"g","baseServings":2},{"name":"harina","amount":40,"unit":"g","baseServings":2},{"name":"queso rallado","amount":100,"unit":"g","baseServings":2}], season:"ambas", types:["standalone"], family:"bolonesa", mealRestriction:"comida",
+    {id:"lasana-canelones", name:"Lasaña / Canelones", categories:["amarillo","rojo"], ingredients:[{"name":"láminas de lasaña o canelones","amount":9,"unit":"ud","baseServings":2},{"name":"carne picada","amount":400,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"leche","amount":500,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":40,"unit":"g","baseServings":2},{"name":"harina","amount":40,"unit":"g","baseServings":2},{"name":"queso rallado","amount":100,"unit":"g","baseServings":2}], season:"ambas", types:["standalone"], meat:"roja", family:"bolonesa", mealRestriction:"comida",
       instructions:"1. Preparar la boloñesa: rehogar la cebolla y la zanahoria picadas, añadir la carne picada y dorar, incorporar el tomate y cocinar 20 minutos.\n2. Preparar la bechamel: derretir la mantequilla, añadir la harina y cocinar un minuto, incorporar la leche poco a poco sin dejar de remover hasta que espese; salpimentar.\n3. Cocer las láminas de pasta según el paquete si hace falta.\n4. Montar en capas en una fuente: pasta, boloñesa, un poco de bechamel, y repetir hasta terminar con bechamel.\n5. Cubrir con el queso rallado y gratinar en el horno unos 20-25 minutos hasta que esté dorado."},
     {id:"gazpacho-salmorejo", name:"Gazpacho / Salmorejo", categories:["verde","rojo"], ingredients:[{"name":"tomate maduro","amount":600,"unit":"g","baseServings":2},{"name":"pan","amount":50,"unit":"g","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"vinagre"},{"name":"pepino y pimiento (para gazpacho)","amount":0.5,"unit":"ud","baseServings":2},{"name":"taquitos de jamón","amount":60,"unit":"g","baseServings":2},{"name":"huevo duro (para salmorejo)","amount":1,"unit":"ud","baseServings":2}], season:"calor", types:["standalone"], mealRestriction:"cena",
       instructions:"Gazpacho: triturar el tomate, el pepino, el pimiento, el pan, el ajo, el aceite y el vinagre hasta que quede fino. Colar si se desea, y enfriar antes de servir. Servir con taquitos de jamón por encima.\n\nSalmorejo: triturar el tomate, el pan, el ajo y el aceite hasta obtener una crema espesa. Servir frío con huevo duro picado y taquitos de jamón por encima."},
     {id:"ensaladilla-rusa", name:"Ensaladilla rusa", categories:["azul","amarillo","morado"], ingredients:[{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"atún en lata","amount":1,"unit":"ud","baseServings":2},{"name":"mayonesa","amount":100,"unit":"g","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"guisantes","amount":100,"unit":"g","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2}], season:"calor", types:["standalone"], cannedFish:true,
       instructions:"1. Cocer la patata y la zanahoria troceadas junto con los guisantes hasta que estén tiernas.\n2. Cocer los huevos por separado.\n3. Escurrir bien las verduras, dejar templar y mezclar con el atún escurrido y la mayonesa.\n4. Picar uno de los huevos cocidos y mezclarlo; decorar con el otro huevo en rodajas."},
-    {id:"ensalada-cesar-pollo", name:"Ensalada César con pollo", categories:["verde","rojo","amarillo"], ingredients:[{"name":"lechuga","amount":150,"unit":"g","baseServings":2},{"name":"picatostes","amount":40,"unit":"g","baseServings":2},{"name":"pechuga de pollo empanada","amount":2,"unit":"ud","baseServings":2},{"name":"salsa césar"},{"name":"queso parmesano rallado"}], season:"ambas", types:["standalone"],
+    {id:"ensalada-cesar-pollo", name:"Ensalada César con pollo", categories:["verde","rojo","amarillo"], ingredients:[{"name":"lechuga","amount":150,"unit":"g","baseServings":2},{"name":"picatostes","amount":40,"unit":"g","baseServings":2},{"name":"pechuga de pollo empanada","amount":2,"unit":"ud","baseServings":2},{"name":"salsa césar"},{"name":"queso parmesano rallado"}], season:"ambas", types:["standalone"], meat:"ave",
       instructions:"1. Trocear la lechuga.\n2. Cocinar el pollo empanado (a la plancha o al horno) y cortarlo en tiras.\n3. Mezclar la lechuga con los picatostes y el pollo, añadir el parmesano, y aliñar con la salsa césar."},
-    {id:"pizza", name:"Pizza", categories:["amarillo","rojo"], ingredients:[{"name":"masa de pizza","amount":1,"unit":"ud","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"queso rallado","amount":150,"unit":"g","baseServings":2},{"name":"jamón york","amount":100,"unit":"g","baseServings":2}], season:"ambas", types:["standalone"], special:"tiktok", mealRestriction:"cena",
+    {id:"pizza", name:"Pizza", categories:["amarillo","rojo"], ingredients:[{"name":"masa de pizza","amount":1,"unit":"ud","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"queso rallado","amount":150,"unit":"g","baseServings":2},{"name":"jamón york","amount":100,"unit":"g","baseServings":2}], season:"ambas", types:["standalone"], meat:"procesada", special:"tiktok", mealRestriction:"cena",
       instructions:"1. Extender la masa de pizza en una bandeja.\n2. Cubrir con el tomate frito, el queso rallado y el jamón york (o los ingredientes que se prefieran).\n3. Hornear a 220°C 12-15 minutos hasta que el queso se dore."},
-    {id:"perritos-calientes", name:"Perritos calientes", categories:["rojo","amarillo"], ingredients:[{"name":"salchichas","amount":4,"unit":"ud","baseServings":2},{"name":"pan de perrito","amount":2,"unit":"ud","baseServings":2},{"name":"ketchup"},{"name":"mostaza"}], season:"ambas", types:["standalone"], special:"tiktok", mealRestriction:"cena",
+    {id:"perritos-calientes", name:"Perritos calientes", categories:["rojo","amarillo"], ingredients:[{"name":"salchichas","amount":4,"unit":"ud","baseServings":2},{"name":"pan de perrito","amount":2,"unit":"ud","baseServings":2},{"name":"ketchup"},{"name":"mostaza"}], season:"ambas", types:["standalone"], meat:"procesada", special:"tiktok", mealRestriction:"cena",
       instructions:"1. Cocer o calentar las salchichas.\n2. Calentar el pan de perrito.\n3. Colocar la salchicha en el pan y añadir ketchup y mostaza al gusto."},
-    {id:"fajitas", name:"Fajitas", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pollo en tiras","amount":300,"unit":"g","baseServings":2},{"name":"pimientos","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"tortillas de trigo","amount":4,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"tortilla-trigo", mealRestriction:"cena",
+    {id:"fajitas", name:"Fajitas", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pollo en tiras","amount":300,"unit":"g","baseServings":2},{"name":"pimientos","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"tortillas de trigo","amount":4,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], meat:"ave", family:"tortilla-trigo", mealRestriction:"cena",
       instructions:"1. Cortar el pollo en tiras y salpimentar.\n2. Saltear en una sartén con los pimientos y la cebolla en tiras hasta que estén hechos.\n3. Calentar las tortillas de trigo y rellenar con la mezcla."},
     {id:"mayonesa-atun", name:"Wrap de atún y aguacate", categories:["azul","amarillo","verde"], ingredients:[{"name":"tortilla de trigo (fajita)","amount":2,"unit":"ud","baseServings":1},{"name":"tarrina de queso crema","amount":0.5,"unit":"ud","baseServings":1},{"name":"atún en lata","amount":1,"unit":"ud","baseServings":1},{"name":"aguacate","amount":0.5,"unit":"ud","baseServings":1},{"name":"cebolla morada","amount":0.5,"unit":"ud","baseServings":1},{"name":"cucharada de mostaza","amount":1.5,"unit":"ud","baseServings":1},{"name":"zumo de limón"}], season:"ambas", types:["standalone"], mealRestriction:"cena", special:"tiktok", cannedFish:true, family:"tortilla-trigo",
       instructions:"1. Mezclar en un bol el atún escurrido, la cebolla morada picada fina, la mostaza y un chorro de zumo de limón.\n2. Untar la tortilla con el queso crema.\n3. Repartir por encima la mezcla de atún y el aguacate en láminas, y enrollar (2 wraps por persona)."},
-    {id:"pasta-alfredo", name:"Pasta Alfredo", categories:["amarillo","rojo"], ingredients:[{"name":"pechuga de pollo"},{"name":"aceite"},{"name":"sal"},{"name":"pimienta"},{"name":"pimentón"},{"name":"ajo (2 dientes)"},{"name":"leche (2 tazas)"},{"name":"caldo de pollo (2 tazas)"},{"name":"pasta"},{"name":"queso parmesano (1 taza)"}], season:"ambas", types:["standalone"], 
+    {id:"pasta-alfredo", name:"Pasta Alfredo", categories:["amarillo","rojo"], ingredients:[{"name":"pechuga de pollo"},{"name":"aceite"},{"name":"sal"},{"name":"pimienta"},{"name":"pimentón"},{"name":"ajo (2 dientes)"},{"name":"leche (2 tazas)"},{"name":"caldo de pollo (2 tazas)"},{"name":"pasta"},{"name":"queso parmesano (1 taza)"}], season:"ambas", types:["standalone"], meat:"ave", 
       instructions:"1. Cocinar la pechuga de pollo en una sartén con aceite; salpimentar y añadir pimentón.\n2. Retirar el pollo y reservar.\n3. En la misma sartén, añadir el ajo picado.\n4. Añadir la leche y el caldo de pollo. Salpimentar de nuevo.\n5. Cocer la pasta en esta misma mezcla.\n6. Añadir el queso parmesano.\n7. Incorporar el pollo reservado y servir."},
     {id:"pasta-pesto", name:"Pasta al pesto", categories:["amarillo","verde"], ingredients:[{"name":"pasta","amount":160,"unit":"g","baseServings":2},{"name":"pesto","amount":70,"unit":"g","baseServings":2},{"name":"queso parmesano rallado"}], season:"ambas", types:["standalone"],
       instructions:"1. Cocer la pasta en agua con sal según el paquete, reservando un poco de agua de cocción antes de escurrir.\n2. Mezclar la pasta escurrida con el pesto fuera del fuego, añadiendo un par de cucharadas del agua reservada para que quede cremoso.\n3. Servir con queso parmesano por encima."},
-    {id:"burrito-pollo", name:"Burrito de pollo", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pollo","amount":300,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"aguacate","amount":1,"unit":"ud","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"queso rallado","amount":80,"unit":"g","baseServings":2},{"name":"tortilla de trigo","amount":2,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"tortilla-trigo", mealRestriction:"cena", special:"tiktok",
+    {id:"burrito-pollo", name:"Burrito de pollo", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pollo","amount":300,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"aguacate","amount":1,"unit":"ud","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"queso rallado","amount":80,"unit":"g","baseServings":2},{"name":"tortilla de trigo","amount":2,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], meat:"ave", family:"tortilla-trigo", mealRestriction:"cena", special:"tiktok",
       instructions:"1. Cocinar el pollo troceado con la cebolla hasta que esté hecho.\n2. Calentar la tortilla de trigo.\n3. Rellenar con el pollo, el tomate frito, el aguacate en láminas y el queso rallado, y enrollar."},
-    {id:"burrito-clasico", name:"Burrito clásico", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pechuga de pollo"},{"name":"tomate"},{"name":"pimiento verde"},{"name":"cebolla"},{"name":"zumo de limón"},{"name":"sal"},{"name":"aguacate"},{"name":"cilantro"},{"name":"pepinillos"},{"name":"ketchup"},{"name":"mayonesa"},{"name":"mostaza"},{"name":"ajo en polvo"},{"name":"pimentón"},{"name":"curry"},{"name":"canela"},{"name":"arroz"},{"name":"tortilla de trigo"}], season:"ambas", types:["standalone"], family:"tortilla-trigo", mealRestriction:"cena", 
+    {id:"burrito-clasico", name:"Burrito clásico", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pechuga de pollo"},{"name":"tomate"},{"name":"pimiento verde"},{"name":"cebolla"},{"name":"zumo de limón"},{"name":"sal"},{"name":"aguacate"},{"name":"cilantro"},{"name":"pepinillos"},{"name":"ketchup"},{"name":"mayonesa"},{"name":"mostaza"},{"name":"ajo en polvo"},{"name":"pimentón"},{"name":"curry"},{"name":"canela"},{"name":"arroz"},{"name":"tortilla de trigo"}], season:"ambas", types:["standalone"], meat:"ave", family:"tortilla-trigo", mealRestriction:"cena", 
       instructions:"Pico de gallo: mezclar tomate, pimiento verde y cebolla picados muy finos con un poco de zumo de limón y sal.\n\nGuacamole: machacar aguacate y mezclar con cebolla en cuadraditos, cilantro, zumo de limón y sal. Reservar.\n\nSalsa: mezclar pepinillos y cebolla picados con ketchup, mayonesa y un poco de mostaza. Reservar.\n\nPollo: cocinar la pechuga cortada en tiras finas y pequeñas. Sazonar con ajo en polvo, pimentón, un poco de curry y un poco de canela, y volver a cocinar brevemente para integrar los sabores.\n\nArroz: aliñar arroz blanco ya cocido con un poco de limón, cilantro y sal.\n\nMontaje: rellenar la tortilla con el arroz, el pollo, el pico de gallo, el guacamole y la salsa."},
-    {id:"pastel-patata-carne", name:"Pastel de carne y patata", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"patata","amount":3,"unit":"ud","baseServings":2},{"name":"leche","amount":100,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":20,"unit":"g","baseServings":2},{"name":"queso rallado","amount":80,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+    {id:"pastel-patata-carne", name:"Pastel de carne y patata", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"patata","amount":3,"unit":"ud","baseServings":2},{"name":"leche","amount":100,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":20,"unit":"g","baseServings":2},{"name":"queso rallado","amount":80,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], meat:"roja",
       instructions:"1. Cocer las patatas peladas y troceadas en agua con sal; escurrir y hacer un puré con la leche y la mantequilla.\n2. Sofreír la carne picada salpimentada en una sartén con un poco de aceite hasta que se dore.\n3. Extender la carne en una fuente de cristal y cubrir con una capa de puré.\n4. Terminar con queso rallado por encima y gratinar al horno a 200°C unos 10-15 minutos, hasta que el queso se dore."},
-    {id:"judias-blancas", name:"Judías blancas", categories:["marron"], ingredients:[{"name":"alubias blancas cocidas","amount":300,"unit":"g","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"chorizo","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"aceite de oliva"},{"name":"hoja de laurel","amount":1,"unit":"ud","baseServings":2}], season:"frio", types:["standalone"], mealRestriction:"comida",
-      instructions:"1. Picar la cebolla y rehogar en aceite hasta que esté transparente.\n2. Añadir la zanahoria en rodajas y el chorizo troceado, cocinar unos minutos.\n3. Incorporar el pimentón y dar unas vueltas rápido.\n4. Añadir las alubias con su caldo (o cubrir de agua si son secas ya cocidas), el laurel, y cocer a fuego medio 15-20 minutos para que se integren los sabores."},
+    {id:"judias-blancas", name:"Judías blancas con verduras", categories:["marron","verde"], ingredients:[{"name":"alubias blancas cocidas","amount":300,"unit":"g","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"puerro","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"chorizo (opcional)","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"aceite de oliva"},{"name":"hoja de laurel","amount":1,"unit":"ud","baseServings":2}], season:"frio", types:["standalone"], mealRestriction:"comida",
+      instructions:"1. Picar la cebolla, el puerro y el pimiento, y rehogar en aceite hasta que estén blandos.\n2. Añadir la zanahoria en rodajas (y el chorizo troceado, si se usa) y cocinar unos minutos.\n3. Incorporar el pimentón y dar unas vueltas rápido.\n4. Añadir las alubias con su caldo (o cubrir de agua), el laurel, y cocer a fuego medio 15-20 minutos para que se integren los sabores."},
     {id:"cada-uno-lo-suyo", name:"Cada uno lo suyo", categories:[], ingredients:[], season:"ambas", types:["standalone"], mealRestriction:"cena", note:"Sobras de la semana — cada uno se prepara lo que haya."},
     {id:"tortilla-francesa", name:"Tortilla francesa", categories:["morado"], ingredients:[{"name":"huevo","amount":4,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"], mealRestriction:"cena",
       instructions:"1. Batir los huevos con una pizca de sal.\n2. Calentar un poco de aceite en una sartén y verter los huevos batidos.\n3. Cuajar a fuego medio y doblar la tortilla por la mitad antes de que cuaje del todo."},
-    {id:"ensalada-garbanzos", name:"Ensalada de garbanzos", categories:["marron"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"maíz dulce","amount":100,"unit":"g","baseServings":2},{"name":"rúcula"},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["standalone","guarnicion"],
+    {id:"ensalada-garbanzos", name:"Ensalada de garbanzos", categories:["marron","verde"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"maíz dulce","amount":100,"unit":"g","baseServings":2},{"name":"rúcula"},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["standalone","guarnicion"],
       instructions:"1. Escurrir y enjuagar los garbanzos cocidos.\n2. Cortar el tomate en dados.\n3. Mezclar en un bol los garbanzos, el tomate, el maíz y la rúcula.\n4. Aliñar con aceite de oliva, vinagre y sal al gusto."},
     {id:"ensalada-lentejas", name:"Ensalada de lentejas", categories:["marron","verde"], ingredients:[{"name":"lentejas cocidas","amount":400,"unit":"g","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"pepino","amount":0.5,"unit":"ud","baseServings":2},{"name":"cebolla morada","amount":0.25,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["standalone"],
       instructions:"1. Escurrir y enjuagar las lentejas cocidas.\n2. Picar el tomate, el pimiento, el pepino y la cebolla en dados pequeños.\n3. Mezclar todo en un bol y aliñar con aceite de oliva, vinagre y sal.\n4. Dejar en la nevera 15-20 minutos antes de servir para que coja sabor."},
     {id:"ensalada-alubias-atun", name:"Ensalada de alubias blancas con atún", categories:["marron","azul","verde"], ingredients:[{"name":"alubias blancas cocidas","amount":400,"unit":"g","baseServings":2},{"name":"atún en lata","amount":2,"unit":"ud","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento verde","amount":0.5,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.25,"unit":"ud","baseServings":2},{"name":"aceitunas negras"},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["standalone"], cannedFish:true,
       instructions:"1. Escurrir y enjuagar las alubias cocidas.\n2. Picar el tomate, los pimientos y la cebolla en dados pequeños.\n3. Mezclar en un bol con las alubias, el atún escurrido y las aceitunas.\n4. Aliñar con aceite de oliva, vinagre y sal, y dejar en la nevera 15-20 minutos antes de servir."},
+    {id:"garbanzos-bacalao", name:"Garbanzos con bacalao y espinacas", categories:["marron","azul","verde"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"bacalao desalado","amount":250,"unit":"g","baseServings":2},{"name":"espinacas","amount":150,"unit":"g","baseServings":2},{"name":"cebolla","amount":1,"unit":"ud","baseServings":2},{"name":"puerro","amount":0.5,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"rebanada de pan","amount":1,"unit":"ud","baseServings":2},{"name":"caldo de verduras","amount":500,"unit":"ml","baseServings":2},{"name":"pimentón dulce"},{"name":"hoja de laurel","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"frio", types:["standalone"], family:"guiso-garbanzos",
+      instructions:"1. Cocer el huevo 10 minutos, enfriarlo y pelarlo.\n2. Dorar el ajo laminado y el pan en un poco de aceite; machacarlos en el mortero y reservar.\n3. En el mismo aceite, pochar la cebolla y el puerro picados. Añadir el pimentón, remover rápido y cubrir con el caldo; añadir el laurel.\n4. Añadir las espinacas y cocer 2-3 minutos; incorporar los garbanzos escurridos, el bacalao en trozos y el majado de ajo y pan. Cocer 4-5 minutos a fuego suave.\n5. Servir con el huevo cocido en cuartos por encima."},
+    {id:"lentejas-arroz", name:"Lentejas con arroz", categories:["marron","amarillo","verde"], ingredients:[{"name":"lentejas","amount":150,"unit":"g","baseServings":2},{"name":"arroz redondo","amount":50,"unit":"g","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"pimiento verde","amount":0.5,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"caldo de verduras","amount":500,"unit":"ml","baseServings":2},{"name":"pimentón dulce"},{"name":"hoja de laurel","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], mealRestriction:"comida", family:"lentejas",
+      instructions:"1. Trocear las verduras en trozos grandes y rehogarlas en aceite en una cazuela alta a fuego medio hasta que se doren.\n2. Añadir las lentejas, el pimentón y el laurel, remover y cubrir con el caldo. Cocer unos 30 minutos, hasta que las lentejas estén casi tiernas.\n3. Añadir el arroz y cocer tapado unos 15 minutos más, sin remover.\n4. Opcional: sacar las verduras, triturarlas con un poco de caldo y devolverlas a la cazuela para espesar.\n5. Rectificar de sal y servir."},
+    {id:"crema-lentejas-rojas", name:"Crema de lentejas rojas con verduras", categories:["marron","verde"], ingredients:[{"name":"lentejas rojas","amount":125,"unit":"g","baseServings":2},{"name":"caldo de verduras","amount":500,"unit":"ml","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"patata","amount":0.5,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":2,"unit":"ud","baseServings":2},{"name":"limón","amount":0.5,"unit":"ud","baseServings":2},{"name":"comino molido"},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], family:"crema",
+      instructions:"1. Picar la cebolla, la zanahoria, el pimiento, la patata y el ajo.\n2. Rehogar la cebolla en aceite hasta que esté transparente; añadir el resto de verduras y cocinar 2 minutos.\n3. Añadir las lentejas rojas y el caldo. Llevar a ebullición y cocer a fuego suave unos 25-30 minutos.\n4. Añadir el zumo del limón y una pizca de comino, y triturar hasta que quede una crema fina.\n5. Rectificar de sal y servir con un chorrito de aceite y pimentón por encima."},
+    {id:"salteado-garbanzos", name:"Garbanzos salteados con verduras y huevo", categories:["marron","verde","morado"], ingredients:[{"name":"garbanzos cocidos","amount":300,"unit":"g","baseServings":2},{"name":"cebolla","amount":1,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"espinacas","amount":100,"unit":"g","baseServings":2},{"name":"tomates cherry","amount":6,"unit":"ud","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2},{"name":"comino molido"},{"name":"pimentón dulce"},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+      instructions:"1. Pochar la cebolla picada en aceite a fuego medio hasta que esté dorada.\n2. Añadir el ajo y la zanahoria en dados, tapar y cocinar 10-15 minutos a fuego bajo (añadir un poco de agua si hace falta).\n3. Incorporar las espinacas y, cuando se reduzcan, los garbanzos escurridos y los tomates cherry con sal, pimentón y comino. Cocinar 5-10 minutos.\n4. Cascar los huevos por encima, tapar y dejar que cuajen. Servir enseguida."},
+    {id:"hummus", name:"Hummus con crudités", categories:["marron","verde","amarillo"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"cucharada de tahini","amount":1,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"limón","amount":1,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":2,"unit":"ud","baseServings":2},{"name":"pepino","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"pan de pita","amount":2,"unit":"ud","baseServings":2},{"name":"comino molido"},{"name":"pimentón dulce"},{"name":"aceite de oliva"}], season:"calor", types:["standalone"], mealRestriction:"cena",
+      instructions:"1. Escurrir y enjuagar los garbanzos.\n2. Triturar los garbanzos con el ajo, el tahini, el zumo del limón, una cucharadita de comino, sal y 3 cucharadas de aceite, añadiendo agua poco a poco hasta que quede cremoso.\n3. Cortar la zanahoria, el pepino y el pimiento en bastones.\n4. Servir el hummus con un chorrito de aceite y pimentón por encima, con los bastones de verdura y el pan de pita."},
     {id:"garbanzos-espinacas", name:"Garbanzos con verduras y espinacas", categories:["marron","verde"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"espinacas","amount":300,"unit":"g","baseServings":2},{"name":"cebolla","amount":1,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":2,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"aceite de oliva"}], season:"frio", types:["standalone"], family:"guiso-garbanzos",
       instructions:"1. Picar la cebolla y el ajo y rehogar en aceite de oliva hasta que doren.\n2. Añadir el pimentón, remover rápido, e incorporar las espinacas troceadas.\n3. Cocinar hasta que las espinacas se reduzcan.\n4. Añadir los garbanzos escurridos, mezclar y cocinar unos minutos más. Rectificar de sal."},
-    {id:"lentejas", name:"Lentejas", categories:["marron"], ingredients:[{"name":"lentejas","amount":150,"unit":"g","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"chorizo","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"aceite de oliva"}], season:"frio", types:["standalone"], mealRestriction:"comida",
-      instructions:"1. Picar la cebolla y el ajo y sofreír en aceite hasta dorar.\n2. Añadir el chorizo en rodajas y el pimentón, dar unas vueltas.\n3. Incorporar la zanahoria en rodajas, rehogar un par de minutos.\n4. Añadir las lentejas, cubrir con agua y salpimentar.\n5. Cocer a fuego medio unos 30 minutos, añadiendo la patata troceada a mitad de cocción."},
-    {id:"potaje", name:"Potaje", categories:["marron"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":1,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"caldo de verduras","amount":500,"unit":"ml","baseServings":2}], season:"frio", types:["standalone"], family:"guiso-garbanzos",
+    {id:"lentejas", name:"Lentejas con verduras", categories:["marron","verde"], ingredients:[{"name":"lentejas","amount":150,"unit":"g","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"chorizo (opcional)","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"aceite de oliva"}], season:"frio", types:["standalone"], mealRestriction:"comida", family:"lentejas",
+      instructions:"1. Picar la cebolla, el ajo, el pimiento y el tomate, y sofreír en aceite unos 10 minutos.\n2. Si se usa chorizo, añadirlo en rodajas; incorporar el pimentón y dar unas vueltas rápido.\n3. Incorporar la zanahoria en rodajas, rehogar un par de minutos.\n4. Añadir las lentejas, cubrir con agua y salpimentar.\n5. Cocer a fuego medio unos 30 minutos, añadiendo la patata troceada a mitad de cocción."},
+    {id:"potaje", name:"Potaje", categories:["marron","verde"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":1,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"caldo de verduras","amount":500,"unit":"ml","baseServings":2}], season:"frio", types:["standalone"], family:"guiso-garbanzos",
       instructions:"1. Sofreír la cebolla picada en aceite de oliva 5-7 minutos.\n2. Añadir el ajo y el pimiento rojo, cocinar unos minutos más.\n3. Incorporar la zanahoria y la patata en trozos, el pimentón, y los garbanzos escurridos.\n4. Cubrir con el caldo de verduras y cocer a fuego medio 20-25 minutos, hasta que las verduras estén tiernas."},
-    {id:"pollo-asado", name:"Pollo asado con patatas", categories:["rojo","amarillo"], ingredients:[{"name":"muslos de pollo","amount":4,"unit":"ud","baseServings":2},{"name":"patata mediana","amount":2,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"pimentón dulce"}], season:"frio", types:["standalone"], mealRestriction:"comida",
+    {id:"pollo-asado", name:"Pollo asado con patatas", categories:["rojo","amarillo"], ingredients:[{"name":"muslos de pollo","amount":4,"unit":"ud","baseServings":2},{"name":"patata mediana","amount":2,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"pimentón dulce"}], season:"frio", types:["standalone"], meat:"ave", mealRestriction:"comida",
       instructions:"1. Precalentar el horno a 200°C.\n2. Cortar las patatas en rodajas y la cebolla en juliana; colocar en la bandeja de horno, salpimentar y regar con aceite.\n3. Colocar el pollo encima, salpimentar, añadir los ajos y el pimentón.\n4. Hornear 45-50 minutos, dando la vuelta al pollo a mitad de cocción."},
-    {id:"pollo-plancha", name:"Pollo a la plancha", categories:["rojo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+    {id:"pollo-plancha", name:"Pollo a la plancha", categories:["rojo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"], meat:"ave",
       instructions:"1. Salpimentar las pechugas de pollo.\n2. Cocinar en una plancha o sartén con un poco de aceite, 4-5 minutos por cada lado hasta que estén doradas y hechas por dentro."},
-    {id:"pollo-curry-limon", name:"Pollo al curry o limón", categories:["rojo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"curry en polvo o zumo de limón"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+    {id:"pollo-curry-limon", name:"Pollo al curry o limón", categories:["rojo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"curry en polvo o zumo de limón"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"], meat:"ave",
       instructions:"1. Cortar el pollo en trozos y salpimentar.\n2. Cocinar en una sartén con aceite hasta dorar por todos los lados.\n3. Añadir el curry en polvo (o el zumo de limón) y un poco de agua, y cocinar 5 minutos más para que se integren los sabores."},
-    {id:"filete-ternera", name:"Filete de ternera a la plancha", categories:["rojo"], ingredients:[{"name":"filete de ternera","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+    {id:"filete-ternera", name:"Filete de ternera a la plancha", categories:["rojo"], ingredients:[{"name":"filete de ternera","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"], meat:"roja",
       instructions:"1. Salpimentar los filetes.\n2. Cocinar en una plancha muy caliente con un poco de aceite, 2-3 minutos por cada lado según el punto deseado."},
-    {id:"filetes-rusos", name:"Filetes rusos", categories:["rojo"], ingredients:[{"name":"carne picada (mitad cerdo, mitad ternera)","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"pan rallado","amount":20,"unit":"g","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"perejil"},{"name":"harina para rebozar"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+    {id:"filetes-rusos", name:"Filetes rusos", categories:["rojo"], ingredients:[{"name":"carne picada (mitad cerdo, mitad ternera)","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"pan rallado","amount":20,"unit":"g","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"perejil"},{"name":"harina para rebozar"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"], meat:"roja",
       instructions:"1. Mezclar la carne picada con el huevo, el pan rallado, el ajo picado y el perejil; salpimentar.\n2. Formar filetes finos y planos con las manos.\n3. Rebozar en harina por ambos lados.\n4. Freír en aceite caliente hasta dorar por los dos lados."},
-    {id:"albondigas", name:"Albóndigas con patatas", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"pan rallado","amount":30,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":300,"unit":"g","baseServings":2},{"name":"patata mediana","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+    {id:"albondigas", name:"Albóndigas con patatas", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"pan rallado","amount":30,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":300,"unit":"g","baseServings":2},{"name":"patata mediana","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], meat:"roja",
       instructions:"1. Mezclar la carne picada con el huevo, el pan rallado y sal; formar bolitas.\n2. Freír las albóndigas en aceite hasta que se doren por fuera.\n3. Añadir el tomate triturado y cocinar a fuego bajo 15 minutos.\n4. Freír o asar las patatas en dados y servir junto a las albóndigas."},
-    {id:"hamburguesa", name:"Hamburguesa", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"pan de hamburguesa","amount":2,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], special:"tiktok", mealRestriction:"cena",
+    {id:"hamburguesa", name:"Hamburguesa", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"pan de hamburguesa","amount":2,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], meat:"roja", special:"tiktok", mealRestriction:"cena",
       instructions:"1. Formar las hamburguesas con la carne picada salpimentada.\n2. Cocinar en la plancha 3-4 minutos por cada lado.\n3. Servir en el pan de hamburguesa."},
     {id:"merluza", name:"Merluza a la plancha o rebozada", categories:["azul"], ingredients:[{"name":"filete de merluza","amount":2,"unit":"ud","baseServings":2},{"name":"harina"},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
       instructions:"A la plancha: secar los filetes con papel de cocina, salar por los dos lados y cocinar en una plancha caliente con un poco de aceite, 2-3 minutos por cada lado.\n\nRebozada: salar los filetes, pasarlos primero por harina y luego por huevo batido, y freír en aceite caliente hasta dorar por ambos lados."},
@@ -517,6 +569,10 @@
       instructions:"1. Precalentar el horno a 200°C.\n2. Hacer 2-3 cortes en cada lado de la dorada, salpimentar por dentro y por fuera, y meter rodajas de limón en los cortes.\n3. Colocar en una bandeja de horno y regar con el ajo y el perejil picados mezclados con un buen chorro de aceite de oliva.\n4. Hornear 20-25 minutos, hasta que la carne se separe fácilmente de la espina."},
     {id:"cazon-adobo", name:"Cazón en adobo", categories:["azul"], ingredients:[{"name":"cazón en tacos","amount":400,"unit":"g","baseServings":2},{"name":"vinagre de vino","amount":60,"unit":"ml","baseServings":2},{"name":"agua","amount":60,"unit":"ml","baseServings":2},{"name":"diente de ajo","amount":3,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"comino molido"},{"name":"orégano"},{"name":"harina (mejor de garbanzo)"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
       instructions:"1. La noche anterior (o al menos 4 horas antes): mezclar el vinagre, el agua, los ajos machacados, una cucharadita de pimentón, media de comino, una pizca de orégano y sal. Cubrir el cazón con el adobo y dejarlo en la nevera tapado.\n2. Escurrir bien los tacos de cazón y pasarlos por harina, sacudiendo el exceso.\n3. Freír en abundante aceite bien caliente hasta que estén dorados.\n4. Escurrir sobre papel absorbente antes de servir."},
+    {id:"caballa-horno", name:"Caballa al horno con limón", categories:["azul"], ingredients:[{"name":"caballa limpia (una por persona)","amount":2,"unit":"ud","baseServings":2},{"name":"limón","amount":1,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"pan rallado"},{"name":"perejil"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Precalentar el horno a 180°C y forrar una bandeja con papel de horno untado con un poco de aceite.\n2. Lavar y secar las caballas; salpimentarlas y colocarlas en la bandeja con trozos de limón.\n3. Espolvorear con el ajo y el perejil picados y un poco de pan rallado, y regar con un hilo de aceite.\n4. Hornear unos 20 minutos, hasta que la carne se separe fácilmente de la espina."},
+    {id:"sardinas-horno", name:"Sardinas al horno", categories:["azul"], ingredients:[{"name":"sardinas limpias","amount":400,"unit":"g","baseServings":2},{"name":"diente de ajo","amount":2,"unit":"ud","baseServings":2},{"name":"limón","amount":0.5,"unit":"ud","baseServings":2},{"name":"perejil"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Precalentar el horno a 200°C.\n2. Colocar las sardinas en una bandeja, salarlas y regarlas con el ajo y el perejil picados mezclados con aceite.\n3. Hornear 10-12 minutos.\n4. Servir con un chorrito de zumo de limón."},
     {id:"menestra", name:"Menestra de verduras", categories:["verde"], ingredients:[{"name":"verduras variadas (zanahoria, judías verdes, guisantes, coliflor)","amount":300,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["guarnicion"],
       instructions:"1. Cocer las verduras en agua con sal hasta que estén tiernas.\n2. Escurrir y saltear un par de minutos en una sartén con un poco de aceite de oliva."},
     {id:"ensalada-mixta", name:"Ensalada mixta", categories:["verde"], ingredients:[{"name":"lechuga","amount":100,"unit":"g","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.25,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["guarnicion"],
@@ -529,7 +585,7 @@
       instructions:"1. Trocear la base de hoja verde, el tomate y el aguacate.\n2. Añadir el queso fresco en dados, el maíz y las aceitunas.\n3. Aliñar con aceite de oliva y sal."},
     {id:"judias-patata", name:"Judías verdes con patata", categories:["verde","amarillo"], ingredients:[{"name":"judías verdes","amount":200,"unit":"g","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["guarnicion"],
       instructions:"1. Cocer las judías verdes y la patata troceada juntas en agua con sal hasta que estén tiernas.\n2. Escurrir y saltear un par de minutos con un poco de aceite."},
-    {id:"judias-patata-jamon", name:"Judías verdes con patata y jamón", categories:["verde","amarillo","rojo"], ingredients:[{"name":"judías verdes","amount":200,"unit":"g","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"taquitos de jamón","amount":50,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+    {id:"judias-patata-jamon", name:"Judías verdes con patata y jamón", categories:["verde","amarillo","rojo"], ingredients:[{"name":"judías verdes","amount":200,"unit":"g","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"taquitos de jamón","amount":50,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], meat:"procesada",
       instructions:"1. Cocer las judías verdes y la patata troceada juntas en agua con sal hasta que estén tiernas.\n2. Escurrir y saltear con los taquitos de jamón un par de minutos."},
     {id:"arroz-blanco", name:"Arroz blanco", categories:["amarillo"], ingredients:[{"name":"arroz","amount":150,"unit":"g","baseServings":2},{"name":"sal"}], season:"ambas", types:["guarnicion"],
       instructions:"1. Cocer el arroz en agua con sal (el doble de agua que de arroz) según el tiempo indicado en el paquete.\n2. Escurrir bien antes de servir."},
@@ -549,9 +605,9 @@
       instructions:"1. Pelar y cortar las patatas en láminas finas.\n2. Freír las patatas (y la cebolla, si se usa) en abundante aceite a fuego medio hasta que estén tiernas, unos 10-12 minutos.\n3. Escurrir el aceite y mezclar con los huevos batidos y sal.\n4. Cuajar la mezcla en una sartén con un poco de aceite, dando la vuelta a mitad de cocción con ayuda de un plato."},
     {id:"huevos-fritos-patatas", name:"Huevos fritos con patatas", categories:["morado","amarillo"], ingredients:[{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"huevo","amount":4,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
       instructions:"1. Cortar las patatas en bastones y freír en aceite caliente hasta que estén doradas.\n2. Freír los huevos en el mismo aceite hasta que la clara esté cuajada y la yema al gusto.\n3. Servir juntos."},
-    {id:"sopa-fideos", name:"Sopa de fideos con pollo y huevo", categories:["amarillo","rojo","morado"], ingredients:[{"name":"fideos","amount":80,"unit":"g","baseServings":2},{"name":"caldo de pollo","amount":700,"unit":"ml","baseServings":2},{"name":"pechuga de pollo","amount":1,"unit":"ud","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2}], season:"frio", types:["standalone"],
+    {id:"sopa-fideos", name:"Sopa de fideos con pollo y huevo", categories:["amarillo","rojo","morado"], ingredients:[{"name":"fideos","amount":80,"unit":"g","baseServings":2},{"name":"caldo de pollo","amount":700,"unit":"ml","baseServings":2},{"name":"pechuga de pollo","amount":1,"unit":"ud","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2}], season:"frio", types:["standalone"], meat:"ave",
       instructions:"1. Cocer los huevos 10 minutos, enfriarlos, pelarlos y picarlos.\n2. Cocer la pechuga de pollo en el caldo unos 15 minutos; sacarla y desmenuzarla.\n3. Llevar el caldo de nuevo a ebullición, añadir los fideos y cocer el tiempo indicado en el paquete, unos 5-8 minutos.\n4. Añadir el pollo desmenuzado y el huevo picado, y servir bien caliente."},
-    {id:"cocido", name:"Cocido", categories:["rojo","marron","verde"], ingredients:[{"name":"garbanzos cocidos","amount":300,"unit":"g","baseServings":2},{"name":"carne para cocido (morcillo o pollo)","amount":300,"unit":"g","baseServings":2},{"name":"verduras variadas (repollo, zanahoria, patata)","amount":300,"unit":"g","baseServings":2}], season:"frio", types:["standalone"], family:"guiso-garbanzos", mealRestriction:"comida",
+    {id:"cocido", name:"Cocido", categories:["rojo","marron","verde"], ingredients:[{"name":"garbanzos cocidos","amount":300,"unit":"g","baseServings":2},{"name":"carne para cocido (morcillo o pollo)","amount":300,"unit":"g","baseServings":2},{"name":"verduras variadas (repollo, zanahoria, patata)","amount":300,"unit":"g","baseServings":2}], season:"frio", types:["standalone"], meat:"roja", family:"guiso-garbanzos", mealRestriction:"comida",
       instructions:"1. Cocer la carne en agua abundante durante aproximadamente 1 hora, retirando la espuma que suelte.\n2. Añadir los garbanzos y las verduras troceadas y seguir cociendo 45 minutos más.\n3. Servir el caldo como primer plato y los garbanzos, la carne y las verduras como segundo."},
     {id:"crema-calabacin", name:"Crema de calabacín con huevo cocido", categories:["verde","morado"], ingredients:[{"name":"calabacín","amount":2,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"caldo de verduras","amount":400,"unit":"ml","baseServings":2},{"name":"huevo cocido","amount":1,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"crema",
       instructions:"1. Rehogar la cebolla picada en un poco de aceite.\n2. Añadir el calabacín troceado y el caldo, y cocer 15-20 minutos hasta que esté tierno.\n3. Triturar hasta obtener una crema fina.\n4. Servir con el huevo cocido troceado por encima."},
@@ -560,7 +616,7 @@
     {id:"tostadas", name:"Tostadas", categories:["amarillo"], ingredients:[{"name":"pan de molde o similar","amount":4,"unit":"ud","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], mealRestriction:"cena",
       instructions:"1. Tostar el pan.\n2. Untar con tomate rallado y un chorrito de aceite de oliva."}
   ];
-  const DISHES_VERSION = 19;
+  const DISHES_VERSION = 20;
   const TYPE_LABELS = {
     principal: 'Principal (necesita guarnición)',
     guarnicion: 'Guarnición',
@@ -571,7 +627,7 @@
     const m = new Date().getMonth()+1;
     return (m>=5 && m<=9) ? 'calor' : 'frio';
   }
-  const DEFAULT_PREFS = { fishFrequency: 2, season: defaultSeason(), servings: 2 };
+  const DEFAULT_PREFS = { fishFrequency: 3, legumeFrequency: 3, season: defaultSeason(), servings: 2 };
 
   // ---- storage helpers ----
   async function storageGet(key, fallback){
@@ -591,7 +647,7 @@
   let prefs = {...DEFAULT_PREFS};
   let currentMenu = null;
   let previousMenu = null;
-  let dayAttempts = [0,0,0,0,0];
+  let dayAttempts = DAY_NAMES.map(()=>0);
   let ingredientDraft = [];
   let selectedCats = [];
   let selectedSeasons = ['calor','frio'];
@@ -662,10 +718,13 @@
     return (d.types||['standalone']).includes('guarnicion');
   }
 
-  function pickGarnish(pool, avoidId, excludeCategories){
+  // La guarnición es de verdura 2 de cada 3 veces (siempre si forceVeg).
+  function pickGarnish(pool, avoidId, excludeCategories, forceVeg){
     excludeCategories = excludeCategories || [];
-    const options = pool.filter(isGarnishEligible);
+    let options = pool.filter(isGarnishEligible);
     if (!options.length) return null;
+    const vegOptions = options.filter(d => d.categories.includes('verde'));
+    if (vegOptions.length && (forceVeg || Math.random() < 2/3)) options = vegOptions;
     let candidates = excludeCategories.length
       ? options.filter(d => !d.categories.some(c => excludeCategories.includes(c)))
       : options.slice();
@@ -675,9 +734,9 @@
     return finalOpts[Math.floor(Math.random()*finalOpts.length)].id;
   }
 
-  function buildSlot(mainDish, pool, avoidGarnishId, excludeCategories){
+  function buildSlot(mainDish, pool, avoidGarnishId, excludeCategories, forceVegGarnish){
     const needsGarnish = (mainDish.types||['standalone']).includes('principal');
-    return { main: mainDish.id, garnish: needsGarnish ? pickGarnish(pool, avoidGarnishId, excludeCategories) : null };
+    return { main: mainDish.id, garnish: needsGarnish ? pickGarnish(pool, avoidGarnishId, excludeCategories, forceVegGarnish) : null };
   }
 
   function normalizeSlot(slot){
@@ -770,6 +829,52 @@
     return !!d && d.special === tag;
   }
 
+  // ---- Reglas semanales (AESAN: carne 0-3 raciones/semana, minimizando roja y procesada) ----
+  const MEAT_MAX = 3;
+  const RED_PROC_MAX = 1;
+  const FISH_DINNER_SHARE = 0.2;
+  function isRedOrProcessed(d){ return !!d && (d.meat === 'roja' || d.meat === 'procesada'); }
+  function meatCounts(mainIds){
+    const c = { meat: 0, redProc: 0 };
+    mainIds.forEach(id => { const d = dishById(id); if (d && d.meat){ c.meat++; if (isRedOrProcessed(d)) c.redProc++; } });
+    return c;
+  }
+  // Platos que ya no pueden salir porque se ha llegado al tope de carne de la semana.
+  function meatExclusions(c){
+    if (c.meat >= MEAT_MAX) return dishes.filter(d => d.meat).map(d => d.id);
+    if (c.redProc >= RED_PROC_MAX) return dishes.filter(isRedOrProcessed).map(d => d.id);
+    return [];
+  }
+  // Huevos por persona que lleva un plato (según sus ingredientes). AESAN: hasta 4 a la semana.
+  const EGG_MAX = 4;
+  function eggsPerPerson(d){
+    if (!d) return 0;
+    return d.ingredients.reduce((acc,i)=> acc + ((/^huevo/i.test(i.name.trim()) && i.amount) ? i.amount/(i.baseServings||2) : 0), 0);
+  }
+  function eggExclusions(mainIds){
+    const used = mainIds.reduce((acc,id)=> acc + eggsPerPerson(dishById(id)), 0);
+    return dishes.filter(d => { const e = eggsPerPerson(d); return e > 0 && used + e > EGG_MAX; }).map(d => d.id);
+  }
+  function slotHasVeg(slot){ return !!slot && slotCategories(slot).includes('verde'); }
+  // Si la comida del día no lleva verdura, la cena tiene que llevarla: platos con verdura
+  // o principales (a los que se les pone guarnición de verdura).
+  // Es una preferencia: solo se aplica si queda algún plato que cumpla también las demás reglas
+  // (platos ya usados, tope de carne, no repetir carbohidrato/carne/pescado en el día).
+  function vegFriendly(pool, excludeIds, excludeCats){
+    const ok = pool.filter(d => (d.categories.includes('verde') || (d.types||['standalone']).includes('principal'))
+      && !excludeIds.includes(d.id) && !d.categories.some(c => excludeCats.includes(c)));
+    return ok.length ? ok : pool;
+  }
+
+  // Si al final el día no tiene verdura pero la comida lleva guarnición, se cambia por una de verdura
+  // (sin repetir carbohidrato con la cena).
+  function fixDayVeg(comidaSlot, cenaSlot, pool){
+    if (slotHasVeg(comidaSlot) || slotHasVeg(cenaSlot) || !comidaSlot.garnish) return;
+    const cenaCats = slotCategories(cenaSlot);
+    const g = pickGarnish(pool, cenaSlot.garnish, cenaCats.includes('amarillo') ? ['amarillo'] : [], true);
+    if (g) comidaSlot.garnish = g;
+  }
+
   function ensureFishQuota(days, pool, target){
     let fishCount = days.reduce((acc,d)=> acc + ['comida','cena'].filter(meal=> isRealFish(dishById(d[meal].main))).length, 0);
     if (fishCount >= target) return;
@@ -779,7 +884,8 @@
     for (let i=0;i<days.length && fishCount<target;i++){
       for (const meal of ['cena','comida']){
         if (fishCount>=target) break;
-        const otherMain = dishById(days[i][meal==='comida' ? 'cena' : 'comida'].main);
+        const otherMeal = meal==='comida' ? 'cena' : 'comida';
+        const otherMain = dishById(days[i][otherMeal].main);
         if (pass===0 && otherMain && otherMain.categories.includes('azul')) continue;
         const currentMain = dishById(days[i][meal].main);
         // No se sustituye un plato de legumbre (se perdería la legumbre mínima de la semana).
@@ -794,7 +900,6 @@
           if (tiktokUsedElsewhere) fishCandidates = fishCandidates.filter(d=>d.special!=='tiktok');
           fishCandidates = shuffle(fishCandidates);
           if (!fishCandidates.length) continue;
-          const otherMeal = meal==='comida' ? 'cena' : 'comida';
           const otherCats = slotCategories(days[i][otherMeal]);
           const otherHasCarb = otherCats.includes('amarillo');
           const carbOk = d => !(otherHasCarb && d.categories.includes('amarillo'));
@@ -803,7 +908,7 @@
           if (candidate){
             usedMainIds.delete(days[i][meal].main);
             const excludeCats = otherHasCarb ? ['amarillo'] : [];
-            days[i][meal] = buildSlot(candidate, pool, days[i][otherMeal].garnish, excludeCats);
+            days[i][meal] = buildSlot(candidate, pool, days[i][otherMeal].garnish, excludeCats, !slotHasVeg(days[i][otherMeal]));
             usedMainIds.add(candidate.id);
             fishCount++;
           }
@@ -820,45 +925,60 @@
     }
     const usedThisWeek = {};
     const prevMainIds = previousMenu ? previousMenu.days.flatMap(d=>[d.comida.main, d.cena.main]) : [];
+    const allDays = DAY_NAMES.map((_,i)=>i);
     const fishTarget = prefs.fishFrequency;
-    const fishDays = shuffle([0,1,2,3,4]).slice(0, fishTarget);
-    // Un día con legumbre obligatoria en la comida (mínimo 1 por semana).
-    const legDay = Math.floor(Math.random()*5);
-    // Cada día de pescado lo pone en la comida o en la cena (el día de legumbre, siempre en la cena).
-    // 30% cena porque la cena ya favorece el pescado por sí sola: así queda ~50/50 entre comida y cena.
+    const legTarget = prefs.legumeFrequency;
+    const fishDays = shuffle(allDays).slice(0, fishTarget);
+    // Días con legumbre obligatoria en la comida (tantos como el mínimo semanal),
+    // elegidos preferentemente entre los días que no son de pescado.
+    const legDays = shuffle(allDays.filter(i => !fishDays.includes(i))).concat(shuffle(fishDays)).slice(0, legTarget);
+    // Cada día de pescado lo pone en la comida o en la cena (en un día de legumbre, siempre en la cena).
+    // Casi siempre en la comida porque la cena ya favorece el pescado por sí sola: así queda ~50/50.
     const fishMeal = {};
-    fishDays.forEach(i => { fishMeal[i] = (i === legDay || Math.random() < 0.3) ? 'cena' : 'comida'; });
+    fishDays.forEach(i => { fishMeal[i] = (legDays.includes(i) || Math.random() < FISH_DINNER_SHARE) ? 'cena' : 'comida'; });
     const days = [];
     let tiktokUsedThisWeek = false;
+    let legCount = 0;
     // Si quedan tan pocos pescados sin usar como días de pescado pendientes, se "reservan":
     // se evitan en los demás huecos para no tener que repetir pescado en la semana.
     const realFishIds = pool.filter(isRealFish).map(d=>d.id);
     const fishReserve = (pendingForced) =>
       realFishIds.filter(id => !usedThisWeek[id]).length <= pendingForced ? realFishIds : [];
+    const weekMeat = () => meatCounts(days.flatMap(d=>[d.comida.main, d.cena.main]));
 
-    for (let i=0;i<5;i++){
+    for (let i=0;i<DAY_NAMES.length;i++){
       const needsFish = fishDays.includes(i);
       const laterFishDays = fishDays.filter(j => j > i).length;
 
       let comidaPool = mainEligiblePool(pool, 'comida');
-      const excludeIds1 = usedThisWeekExclusions(usedThisWeek);
+      const weekMains = days.flatMap(d=>[d.comida.main, d.cena.main]);
+      const excludeIds1 = Array.from(new Set([...usedThisWeekExclusions(usedThisWeek), ...meatExclusions(weekMeat()), ...eggExclusions(weekMains)]));
       if (fishMeal[i] === 'comida'){
         const fishOnly = comidaPool.filter(isRealFish);
         if (fishOnly.length) comidaPool = fishOnly;
-      } else if (i === legDay && !days.some(d => isLegume(dishById(d.comida.main)))){
+      } else if (legDays.includes(i) && legCount < legTarget){
+        // Si no queda ninguna legumbre que cumpla todas las reglas, se permite repetir "familia"
+        // (p. ej. dos guisos de garbanzos) antes que saltarse el tope de carne o de huevos.
+        const capIds = new Set([...meatExclusions(weekMeat()), ...eggExclusions(weekMains)]);
         const allLeg = comidaPool.filter(isLegume);
-        const freshLeg = allLeg.filter(d => !excludeIds1.includes(d.id));
-        const legOnly = freshLeg.length ? freshLeg : allLeg.filter(d => !usedThisWeek[d.id]);
-        if (legOnly.length) comidaPool = legOnly;
-        else if (allLeg.length) comidaPool = allLeg;
+        const tiers = [
+          allLeg.filter(d => !excludeIds1.includes(d.id)),
+          allLeg.filter(d => !usedThisWeek[d.id] && !capIds.has(d.id)),
+          allLeg.filter(d => !capIds.has(d.id)),
+          allLeg
+        ];
+        const legOnly = tiers.find(t => t.length);
+        if (legOnly) comidaPool = legOnly;
       }
       const comidaSoft = fishMeal[i] === 'comida' ? prevMainIds
         : prevMainIds.concat(fishReserve(laterFishDays + (needsFish ? 1 : 0)));
       // Si el pescado de hoy va en la cena, se evita pescado (p. ej. atún en lata) en la comida.
       const comidaMain = chooseDish(comidaPool, {excludeIds: excludeIds1, softExcludeIds: comidaSoft, excludeCategories: fishMeal[i] === 'cena' ? ['azul'] : [], mealType:'comida'});
       usedThisWeek[comidaMain.id] = (usedThisWeek[comidaMain.id]||0)+1;
+      if (isLegume(comidaMain)) legCount++;
       const comidaSlot = buildSlot(comidaMain, pool, null);
       const comidaCats = slotCategories(comidaSlot);
+      const needVegAtCena = !slotHasVeg(comidaSlot);
 
       let cenaPool = mainEligiblePool(pool, 'cena');
       if (tiktokUsedThisWeek) cenaPool = cenaPool.filter(d=>d.special!=='tiktok');
@@ -867,9 +987,11 @@
         const fishOnly = cenaPool.filter(isRealFish);
         if (fishOnly.length) cenaPool = fishOnly;
       }
-      const excludeIds2 = Array.from(new Set([...usedThisWeekExclusions(usedThisWeek), comidaMain.id]));
+      const meatNow = meatCounts(days.flatMap(d=>[d.comida.main, d.cena.main]).concat([comidaMain.id]));
+      const excludeIds2 = Array.from(new Set([...usedThisWeekExclusions(usedThisWeek), comidaMain.id, ...meatExclusions(meatNow), ...eggExclusions(weekMains.concat([comidaMain.id]))]));
       // Sin dos carbohidratos, dos carnes ni dos pescados el mismo día (salvo pescado obligatorio en la cena).
       const cenaExcludeCats = comidaCats.filter(c => c === 'amarillo' || c === 'rojo' || (c === 'azul' && !cenaForcedFish));
+      if (needVegAtCena) cenaPool = vegFriendly(cenaPool, excludeIds2, cenaExcludeCats);
       const cenaMain = chooseDish(cenaPool, {
         excludeIds: excludeIds2,
         softExcludeIds: cenaForcedFish ? prevMainIds : prevMainIds.concat(fishReserve(laterFishDays)),
@@ -878,7 +1000,9 @@
       });
       usedThisWeek[cenaMain.id] = (usedThisWeek[cenaMain.id]||0)+1;
       if (cenaMain.special === 'tiktok') tiktokUsedThisWeek = true;
-      const cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish, cenaExcludeCats);
+      if (isLegume(cenaMain)) legCount++;
+      const cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish, cenaExcludeCats, needVegAtCena);
+      fixDayVeg(comidaSlot, cenaSlot, pool);
 
       days.push({day: DAY_NAMES[i], comida: comidaSlot, cena: cenaSlot});
     }
@@ -887,7 +1011,7 @@
 
     previousMenu = currentMenu;
     currentMenu = {days, season: prefs.season};
-    dayAttempts = [0,0,0,0,0];
+    dayAttempts = DAY_NAMES.map(()=>0);
     storageSet('currentMenu', currentMenu);
     storageSet('previousMenu', previousMenu);
     renderWeek();
@@ -895,16 +1019,18 @@
 
   function regenerateDay(i){
     if (!currentMenu) return;
-    dayAttempts[i]++;
+    dayAttempts[i] = (dayAttempts[i]||0) + 1;
     const pool = seasonPool();
     const free = dayAttempts[i] >= 3;
     const prevMainIds = previousMenu ? previousMenu.days.flatMap(d=>[d.comida.main, d.cena.main]) : [];
 
     const otherDaysUsed = {};
+    const otherMainIds = [];
     currentMenu.days.forEach((d,idx)=>{
       if (idx!==i){
         otherDaysUsed[d.comida.main] = (otherDaysUsed[d.comida.main]||0)+1;
         otherDaysUsed[d.cena.main] = (otherDaysUsed[d.cena.main]||0)+1;
+        otherMainIds.push(d.comida.main, d.cena.main);
       }
     });
     const tiktokUsedElsewhere = currentMenu.days.some((d,idx)=> idx!==i && dishHasSpecial(d.cena.main,'tiktok'));
@@ -923,19 +1049,23 @@
       cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish);
       dayAttempts[i] = 0;
     } else {
-      const excludeIds = usedThisWeekExclusions(otherDaysUsed);
+      const excludeIds = Array.from(new Set([...usedThisWeekExclusions(otherDaysUsed), ...meatExclusions(meatCounts(otherMainIds)), ...eggExclusions(otherMainIds)]));
       const comidaMain = chooseDish(comidaBasePool, {excludeIds, softExcludeIds: prevMainIds, mealType:'comida'});
       comidaSlot = buildSlot(comidaMain, pool, null);
       const comidaCats = slotCategories(comidaSlot);
-      const excludeIds2 = usedThisWeekExclusions({...otherDaysUsed, [comidaMain.id]: 1});
+      const needVegAtCena = !slotHasVeg(comidaSlot);
+      const excludeIds2 = Array.from(new Set([...usedThisWeekExclusions({...otherDaysUsed, [comidaMain.id]: 1}),
+        ...meatExclusions(meatCounts(otherMainIds.concat([comidaMain.id]))), ...eggExclusions(otherMainIds.concat([comidaMain.id]))]));
       const cenaExcludeCats = comidaCats.filter(c => c === 'amarillo' || c === 'rojo' || c === 'azul');
-      const cenaMain = chooseDish(cenaBasePool, {
+      const cenaPool = needVegAtCena ? vegFriendly(cenaBasePool, excludeIds2, cenaExcludeCats) : cenaBasePool;
+      const cenaMain = chooseDish(cenaPool, {
         excludeIds: excludeIds2,
         softExcludeIds: prevMainIds,
         excludeCategories: cenaExcludeCats,
         mealType:'cena'
       });
-      cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish, cenaExcludeCats);
+      cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish, cenaExcludeCats, needVegAtCena);
+      fixDayVeg(comidaSlot, cenaSlot, pool);
     }
 
     currentMenu.days[i].comida = comidaSlot;
@@ -1126,6 +1256,12 @@
     });
   }
 
+  function renderLegumeStepper(){
+    document.querySelectorAll('#legumeStepper button').forEach(b=>{
+      b.classList.toggle('selected', parseInt(b.getAttribute('data-val'),10) === prefs.legumeFrequency);
+    });
+  }
+
   function renderServingsStepper(){
     document.querySelectorAll('#servingsStepper button').forEach(b=>{
       b.classList.toggle('selected', parseInt(b.getAttribute('data-val'),10) === prefs.servings);
@@ -1193,6 +1329,7 @@
 
   document.getElementById('prefsBtn').addEventListener('click', ()=>{
     renderFishStepper();
+    renderLegumeStepper();
     renderServingsStepper();
     document.getElementById('prefsOverlay').classList.add('show');
   });
@@ -1205,6 +1342,13 @@
     prefs.fishFrequency = parseInt(btn.getAttribute('data-val'),10);
     storageSet('preferences', prefs);
     renderFishStepper();
+  });
+  document.getElementById('legumeStepper').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    prefs.legumeFrequency = parseInt(btn.getAttribute('data-val'),10);
+    storageSet('preferences', prefs);
+    renderLegumeStepper();
   });
   document.getElementById('servingsStepper').addEventListener('click', (e)=>{
     const btn = e.target.closest('button');
@@ -1403,6 +1547,154 @@
     document.getElementById('shoppingListOverlay').classList.remove('show');
   });
   document.getElementById('topCloseShoppingList').addEventListener('click', ()=> document.getElementById('closeShoppingList').click());
+
+  // ---- Equilibrio de la semana (recomendaciones AESAN 2022, semana completa) ----
+  // Colores de la gráfica: los mismos tonos de las categorías, algo más saturados para que se distingan bien.
+  const BAL_GROUPS = [
+    {cat:'verde',    label:'Verdura',      emoji:'🥦', color:'#4E9A3A'},
+    {cat:'azul',     label:'Pescado',      emoji:'🐟', color:'#2F78C4'},
+    {cat:'marron',   label:'Legumbre',     emoji:'🫘', color:'#99582A'},
+    {cat:'amarillo', label:'Carbohidrato', emoji:'🍝', color:'#D99A1E'},
+    {cat:'rojo',     label:'Carne',        emoji:'🥩', color:'#D0452E'},
+    {cat:'morado',   label:'Huevo',        emoji:'🥚', color:'#8A4FA0'}
+  ];
+
+  function weekBalance(menu){
+    const b = { meals:0, groups:{}, legume:0, fish:0, meat:0, redProc:0, eggs:0, vegDays:0, days:menu.days.length };
+    BAL_GROUPS.forEach(g => b.groups[g.cat] = 0);
+    menu.days.forEach(d => {
+      let dayVeg = false;
+      ['comida','cena'].forEach(meal => {
+        const slot = d[meal]; const main = slot && dishById(slot.main);
+        if (!main) return;
+        b.meals++;
+        const cats = slotCategories(slot);
+        cats.forEach(c => { if (c in b.groups) b.groups[c]++; });
+        if (cats.includes('verde')) dayVeg = true;
+        if (main.categories.includes('marron')) b.legume++;
+        if (main.categories.includes('azul')) b.fish++;
+        if (main.meat){ b.meat++; if (isRedOrProcessed(main)) b.redProc++; }
+        b.eggs += eggsPerPerson(main);
+      });
+      if (dayVeg) b.vegDays++;
+    });
+    b.eggs = Math.round(b.eggs * 2) / 2;
+    return b;
+  }
+
+  function donutSvg(b){
+    const total = BAL_GROUPS.reduce((a,g)=> a + b.groups[g.cat], 0);
+    const r = 60, c = 2*Math.PI*r, gap = total > 1 ? 2 : 0;
+    let offset = 0;
+    const segs = BAL_GROUPS.filter(g => b.groups[g.cat] > 0).map(g => {
+      const len = c * b.groups[g.cat] / total;
+      const seg = `<circle cx="85" cy="85" r="${r}" fill="none" stroke="${g.color}" stroke-width="26"
+        stroke-dasharray="${Math.max(len-gap,0.5)} ${c}" stroke-dashoffset="${-offset}" transform="rotate(-90 85 85)">
+        <title>${g.label}: en ${b.groups[g.cat]} de ${b.meals} comidas</title></circle>`;
+      offset += len;
+      return seg;
+    }).join('');
+    return `<svg class="bal-donut" viewBox="0 0 170 170" role="img" aria-label="Proporción de grupos de alimentos en la semana">
+      ${segs}
+      <text x="85" y="82" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="800" font-size="24" fill="var(--ink)">${b.meals}</text>
+      <text x="85" y="101" text-anchor="middle" font-family="Nunito,sans-serif" font-size="11" fill="var(--ink-soft)">comidas</text>
+    </svg>`;
+  }
+
+  function renderBalance(){
+    const el = document.getElementById('balanceContent');
+    if (!currentMenu){
+      el.innerHTML = '<div class="empty-state">Genera un menú semanal primero.</div>';
+      return;
+    }
+    const b = weekBalance(currentMenu);
+    const fullWeek = b.days === 7;
+    const checks = [
+      { ok: b.legume >= 4, near: b.legume === 3, t: `Legumbre: ${b.legume} ${b.legume===1?'vez':'veces'}`, d: 'Recomendado: al menos 4 a la semana.' },
+      { ok: b.fish >= 3, near: b.fish === 2, t: `Pescado: ${b.fish} ${b.fish===1?'vez':'veces'}`, d: 'Recomendado: al menos 3 a la semana, mejor si es pescado azul.' },
+      { ok: b.meat <= 3 && b.redProc <= 1, near: b.meat <= 4 && b.redProc <= 2, t: `Carne: ${b.meat} ${b.meat===1?'ración':'raciones'} (${b.redProc} roja o procesada)`, d: 'Recomendado: 3 como mucho, sobre todo pollo o pavo, y la mínima carne roja y procesada.' },
+      { ok: b.eggs <= 4, near: b.eggs <= 5, t: `Huevos: unos ${String(b.eggs).replace('.',',')} por persona`, d: 'Recomendado: hasta 4 a la semana (cuenta también los del desayuno o la cena libre).' },
+      { ok: b.vegDays === b.days, near: b.vegDays >= b.days - 1, t: `Verdura: ${b.vegDays} de ${b.days} días`, d: 'Recomendado: 3 raciones de verdura u hortalizas al día. Añade ensalada o verdura de primero cuando puedas.' }
+    ];
+    const bad = checks.filter(c => !c.ok);
+    const verdict = !bad.length
+      ? '✅ Semana equilibrada según las recomendaciones de la AESAN.'
+      : (bad.every(c => c.near) ? '🟡 Casi equilibrada: revisa lo marcado abajo.' : '⚠️ Mejorable: revisa lo marcado abajo.');
+    el.innerHTML = `
+      <div class="bal-verdict">${verdict}${fullWeek ? '' : ' <span class="hint">(este menú no tiene los 7 días; genera uno nuevo)</span>'}</div>
+      <div class="bal-top">
+        ${donutSvg(b)}
+        <div class="bal-legend">
+          ${BAL_GROUPS.map(g => `<div class="row"><span class="sw" style="background:${g.color}"></span><span>${g.emoji} ${g.label}</span><span class="num">${b.groups[g.cat]}</span></div>`).join('')}
+          <div class="hint" style="margin-top:2px;">Número de comidas (de ${b.meals}) en que aparece cada grupo.</div>
+        </div>
+      </div>
+      <div class="bal-checks">
+        ${checks.map(c => `<div class="bal-check"><span class="ic">${c.ok ? '✅' : (c.near ? '🟡' : '⚠️')}</span><div><div class="t">${c.t}</div><div class="d">${c.d}</div></div></div>`).join('')}
+      </div>
+      <p class="hint" style="margin-top:14px;">Solo cuenta las comidas y cenas del menú. La AESAN también recomienda 2-3 piezas de fruta al día, cereales integrales y un puñado de frutos secos: complétalo en desayunos, postres y meriendas. Fuente: AESAN, Recomendaciones dietéticas saludables y sostenibles (2022).</p>`;
+  }
+
+  // ---- Copia de seguridad (exportar / importar) ----
+  function backupPayload(){
+    const data = {};
+    for (let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if (k && k.startsWith('menuSemanal:')){
+        try { data[k.slice('menuSemanal:'.length)] = JSON.parse(localStorage.getItem(k)); } catch(e){}
+      }
+    }
+    return { app:'menu-semanal', version:1, fecha:new Date().toISOString(), data };
+  }
+  async function exportBackup(){
+    const text = JSON.stringify(backupPayload());
+    const day = new Date().toISOString().slice(0,10);
+    // Se comparte como .txt porque Android no deja compartir archivos .json; se recupera igual.
+    const shareFile = new File([text], `menu-semanal-copia-${day}.txt`, {type:'text/plain'});
+    if (navigator.canShare && navigator.canShare({files:[shareFile]})){
+      try { await navigator.share({files:[shareFile], title:'Copia del menú semanal'}); return; }
+      catch(e){ if (e && e.name === 'AbortError') return; }
+    }
+    const url = URL.createObjectURL(new Blob([text], {type:'application/json'}));
+    const a = document.createElement('a');
+    a.href = url; a.download = `menu-semanal-copia-${day}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  }
+  function importBackup(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      let payload;
+      try { payload = JSON.parse(reader.result); } catch(e){ payload = null; }
+      if (!payload || payload.app !== 'menu-semanal' || !payload.data){
+        alert('Ese archivo no es una copia del menú semanal.');
+        return;
+      }
+      const when = payload.fecha ? new Date(payload.fecha).toLocaleDateString('es-ES') : 'fecha desconocida';
+      if (!confirm(`¿Recuperar la copia del ${when}? Se sustituirán el menú, los platos y las preferencias actuales.`)) return;
+      Object.keys(payload.data).forEach(k => {
+        try { localStorage.setItem('menuSemanal:' + k, JSON.stringify(payload.data[k])); } catch(e){}
+      });
+      location.reload();
+    };
+    reader.readAsText(file);
+  }
+  document.getElementById('exportBtn').addEventListener('click', exportBackup);
+  document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const f = e.target.files && e.target.files[0];
+    if (f) importBackup(f);
+    e.target.value = '';
+  });
+
+  document.getElementById('balanceBtn').addEventListener('click', ()=>{
+    renderBalance();
+    document.getElementById('balanceOverlay').classList.add('show');
+  });
+  document.getElementById('closeBalance').addEventListener('click', ()=>{
+    document.getElementById('balanceOverlay').classList.remove('show');
+  });
+  document.getElementById('topCloseBalance').addEventListener('click', ()=> document.getElementById('closeBalance').click());
 
   // Back-gesture / back-button support: closing any overlay this way,
   // instead of exiting the app, by keeping one history entry per "modal open" state.
