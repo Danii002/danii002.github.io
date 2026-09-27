@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Menú de la semana</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FAF6EC">
+<meta name="theme-color" content="#2B3B33" media="(prefers-color-scheme: dark)">
+<style>
+  /* Fuentes locales (SIL OFL) para que la app no dependa de Google Fonts sin conexión */
+  @font-face{font-family:'Kalam';font-style:normal;font-weight:700;font-display:swap;src:url(kalam-700.woff2) format('woff2');}
+  @font-face{font-family:'Nunito';font-style:normal;font-weight:200 1000;font-display:swap;src:url(nunito.woff2) format('woff2');}
+  :root{
+    --paper:#FAF6EC;
+    --paper-card:#FFFDF8;
+    --board:#2B3B33;
+    --board-chalk:#F3EFE4;
+    --ink:#3A2E27;
+    --ink-soft:#6B5F55;
+    --line:#E4DCC9;
+    --rojo:#C4553D;
+    --azul:#3E7CB1;
+    --amarillo:#E0A93E;
+    --verde:#6B8F51;
+    --marron:#8B5E3C;
+    --morado:#7B5C82;
+    --accent:#3F5B4B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Nunito',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:640px;margin:0 auto;padding-bottom:48px;}
+
+  /* ---- Chalkboard header ---- */
+  .board{
+    background:var(--board);
+    color:var(--board-chalk);
+    padding:20px 18px 14px;
+    border-radius:0 0 22px 22px;
+  }
+  .board-top{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .brand{
+    font-family:'Kalam',cursive;
+    font-size:1.7rem;
+    margin:0;
+    letter-spacing:0.5px;
+    text-shadow:0 0 6px rgba(255,255,255,0.15);
+  }
+  .subtitle{font-size:0.85rem;opacity:0.8;margin:2px 0 0;}
+
+  .season-toggle{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.25);
+    border-radius:999px;
+    padding:5px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .season-toggle .opt{
+    padding:5px 10px;
+    border-radius:999px;
+    font-size:0.85rem;
+    font-weight:700;
+    transition:background 0.2s;
+  }
+  .season-toggle .opt.active{background:var(--amarillo);color:#2B2410;}
+  .season-toggle .opt.active.frio{background:var(--azul);color:#fff;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .legend .chip{
+    display:flex;align-items:center;gap:5px;
+    font-size:0.72rem;
+    background:rgba(255,255,255,0.08);
+    padding:4px 8px;
+    border-radius:999px;
+  }
+  .cat-emoji{font-size:0.95rem;line-height:1;display:inline-block;}
+
+  /* ---- Toolbar ---- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:16px 18px 4px;}
+  button{font-family:'Nunito',sans-serif;cursor:pointer;border:none;}
+  .btn-primary{
+    background:var(--accent);color:#fff;
+    padding:12px 18px;font-size:0.95rem;font-weight:800;
+    border-radius:16px 20px 18px 22px;
+    box-shadow:0 2px 0 rgba(0,0,0,0.12);
+    flex:1 1 auto;
+  }
+  .btn-primary:active{transform:translateY(1px);box-shadow:none;}
+  .btn-ghost{
+    background:var(--paper-card);color:var(--ink);
+    border:1.5px solid var(--line);
+    padding:10px 14px;font-size:0.85rem;font-weight:700;
+    border-radius:14px;
+  }
+
+  /* ---- Day jump strip ---- */
+  .day-jump{display:flex;gap:6px;padding:12px 18px 0;overflow-x:auto;}
+  .day-jump a{
+    flex:none;
+    background:var(--paper-card);
+    border:1.5px solid var(--line);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:0.78rem;font-weight:700;color:var(--ink-soft);
+    text-decoration:none;
+    scroll-margin-top:12px;
+  }
+
+  /* ---- Week / day cards ---- */
+  .week{padding:14px 18px;display:flex;flex-direction:column;gap:14px;}
+  .empty-state{
+    text-align:center;color:var(--ink-soft);
+    background:var(--paper-card);border:1.5px dashed var(--line);
+    border-radius:18px;padding:32px 16px;font-size:0.95rem;
+  }
+  .day-card{
+    background:var(--paper-card);
+    border:1.5px solid var(--line);
+    border-radius:18px 22px 20px 24px;
+    padding:14px 16px 16px;
+    scroll-margin-top:12px;
+  }
+  .day-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .day-name{
+    font-family:'Kalam',cursive;
+    font-size:1.25rem;margin:0;color:var(--accent);
+  }
+  .change-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+  .change-btn{
+    background:var(--paper);border:1.5px solid var(--line);
+    border-radius:12px;padding:6px 10px;font-size:0.78rem;font-weight:700;
+    color:var(--ink-soft);
+  }
+  .change-btn:active{background:var(--line);}
+  .attempt-dots{display:flex;gap:3px;}
+  .attempt-dots span{width:5px;height:5px;border-radius:50%;background:var(--line);}
+  .attempt-dots span.filled{background:var(--accent);}
+
+  .meal-row{
+    display:flex;align-items:flex-start;gap:10px;
+    padding:9px 0;
+    border-top:1px dashed var(--line);
+  }
+  .meal-row:first-of-type{border-top:none;}
+  .meal-label{
+    flex:none;width:58px;font-size:0.72rem;font-weight:800;
+    text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);
+    padding-top:2px;
+  }
+  .meal-body{flex:1;}
+  .dish-name{font-size:0.95rem;font-weight:700;line-height:1.3;}
+  .dish-dots{display:flex;gap:4px;margin-top:5px;}
+
+  /* ---- Overlays / modals ---- */
+  .overlay{
+    display:none;position:fixed;inset:0;background:rgba(43,59,51,0.55);
+    align-items:flex-end;justify-content:center;z-index:50;
+  }
+  .overlay.show{display:flex;}
+  .sheet{
+    background:var(--paper);width:100%;max-width:640px;
+    border-radius:22px 22px 0 0;
+    padding:20px 18px 28px;
+    max-height:85vh;overflow-y:auto;
+  }
+  .sheet h2{font-family:'Kalam',cursive;color:var(--accent);margin-top:0;}
+  .sheet-header{
+    position:sticky;top:0;z-index:5;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--paper);
+    margin:-20px -18px 14px;
+    padding:18px 12px 12px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .sheet-header h2{margin:0;}
+  .sheet-close{
+    flex:none;background:var(--paper-card);border:1.5px solid var(--line);
+    border-radius:12px;width:34px;height:34px;font-size:1.1rem;color:var(--ink-soft);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .sheet-close:active{background:var(--line);}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:0.8rem;font-weight:800;color:var(--ink-soft);margin-bottom:6px;}
+  .field input[type=text]{
+    width:100%;padding:10px 12px;border-radius:12px;
+    border:1.5px solid var(--line);font-size:0.95rem;font-family:'Nunito',sans-serif;
+    background:#fff;
+  }
+  .cat-picker,.season-picker{display:flex;flex-wrap:wrap;gap:8px;}
+  .cat-toggle{
+    display:flex;align-items:center;gap:6px;
+    padding:7px 12px;border-radius:999px;border:1.5px solid var(--line);
+    background:#fff;font-size:0.82rem;font-weight:700;
+  }
+  .cat-toggle.selected{border-color:var(--accent);background:#EFEADD;}
+  .season-toggle-btn{
+    padding:7px 14px;border-radius:999px;border:1.5px solid var(--line);
+    background:#fff;font-size:0.82rem;font-weight:700;
+  }
+  .season-toggle-btn.selected{border-color:var(--accent);background:#EFEADD;}
+  .ingredient-input{display:flex;gap:8px;}
+  .ingredient-input input{flex:1;}
+  .ingredient-input button{
+    background:var(--accent);color:#fff;border-radius:12px;padding:0 14px;font-weight:800;
+  }
+  .ingredient-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .ing-chip{
+    background:#EFEADD;border-radius:999px;padding:5px 10px;font-size:0.8rem;
+    display:flex;align-items:center;gap:6px;
+  }
+  .ing-chip button{background:none;color:var(--ink-soft);font-weight:800;padding:0;font-size:0.85rem;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .modal-actions button{flex:1;}
+
+  .stepper{display:flex;gap:8px;}
+  .stepper button{
+    flex:1;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+    padding:10px;font-weight:800;font-size:1rem;color:var(--ink-soft);
+  }
+  .stepper button.selected{border-color:var(--accent);background:var(--accent);color:#fff;}
+  .hint{font-size:0.78rem;color:var(--ink-soft);margin-top:8px;line-height:1.4;}
+
+  .dish-list-item{
+    border-bottom:1px solid var(--line);padding:10px 0;
+    display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+  }
+  .dish-list-item .info{flex:1;}
+  .dish-list-item .name{font-weight:800;font-size:0.92rem;}
+  .dish-list-item .ings{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;}
+  .dish-list-item .season-tag{font-size:0.68rem;color:var(--ink-soft);margin-top:2px;font-style:italic;}
+  .del-btn{background:none;color:var(--rojo);font-weight:800;font-size:0.85rem;padding:4px 6px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="board">
+    <div class="board-top">
+      <div>
+        <h1 class="brand">Menú de la semana</h1>
+        <p class="subtitle">Lunes a viernes, sin preguntar cada día</p>
+      </div>
+      <div class="season-toggle" id="seasonToggle">
+        <span class="opt" data-season="frio">❄️ Frío</span>
+        <span class="opt" data-season="calor">☀️ Calor</span>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="chip">🥩 Carne</span>
+      <span class="chip">🐟 Pescado</span>
+      <span class="chip">🍝 Carbohidrato</span>
+      <span class="chip">🥦 Verdura</span>
+      <span class="chip">🫘 Legumbre</span>
+      <span class="chip">🥚 Huevo</span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn-primary" id="generateBtn">🎲 Generar menú semanal</button>
+  </div>
+  <div class="toolbar" style="padding-top:0;">
+    <button class="btn-ghost" id="prefsBtn">⚙️ Preferencias</button>
+    <button class="btn-ghost" id="addDishBtn">➕ Añadir plato</button>
+    <button class="btn-ghost" id="shoppingListBtn">🛒 Lista de la compra</button>
+  </div>
+
+  <nav class="day-jump" id="dayJump"></nav>
+
+  <main class="week" id="week">
+    <div class="empty-state">Todavía no hay menú. Pulsa <strong>«Generar menú semanal»</strong> para crear el primero.</div>
+  </main>
+</div>
+
+<!-- Preferences -->
+<div class="overlay" id="prefsOverlay">
+  <div class="sheet">
+    <div class="sheet-header"><h2>Preferencias</h2><button class="sheet-close" id="topClosePrefs">✕</button></div>
+    <div class="field">
+      <label>Pescado (sin contar atún en lata), mínimo veces por semana</label>
+      <div class="stepper" id="fishStepper">
+        <button data-val="1">1</button>
+        <button data-val="2">2</button>
+        <button data-val="3">3</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>¿Para cuántas personas se cocina?</label>
+      <div class="stepper" id="servingsStepper">
+        <button data-val="1">1</button>
+        <button data-val="2">2</button>
+        <button data-val="3">3</button>
+      </div>
+      <p class="hint">Ajusta las cantidades de los ingredientes que ya tienen cantidad definida. Los que no la tienen se muestran igual.</p>
+    </div>
+    <p class="hint">La temporada (frío/calor) se cambia desde el interruptor de arriba, junto al título.</p>
+    <div class="field">
+      <label>Base de datos de platos</label>
+      <button class="btn-ghost" id="openDishesFromPrefs" style="width:100%;">🍽️ Platos</button>
+      <p class="hint">Edita las categorías, la temporada o los ingredientes de cada plato, o añade/elimina platos.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="closePrefs">Hecho</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit dish -->
+<div class="overlay" id="addDishOverlay">
+  <div class="sheet">
+    <div class="sheet-header"><h2 id="dishFormTitle">Añadir plato</h2><button class="sheet-close" id="topCloseAddDish">✕</button></div>
+    <div class="field">
+      <label>Nombre del plato</label>
+      <input type="text" id="newDishName" placeholder="Ej: Merluza en salsa verde">
+    </div>
+    <div class="field">
+      <label>Tipo de plato (puede marcar varios a la vez)</label>
+      <div class="cat-picker" id="typePicker">
+        <span class="cat-toggle" data-t="standalone">Plato único</span>
+        <span class="cat-toggle" data-t="principal">Principal (necesita guarnición)</span>
+        <span class="cat-toggle" data-t="guarnicion">Guarnición</span>
+      </div>
+      <p class="hint">Un plato "principal" se combinará automáticamente con una guarnición al generar el menú. Puede ser varias cosas a la vez: por ejemplo, "plato único" y también "guarnición".</p>
+    </div>
+    <div class="field">
+      <label>Categorías (puede tener varias)</label>
+      <div class="cat-picker" id="catPicker">
+        <span class="cat-toggle" data-cat="rojo">🥩 Carne</span>
+        <span class="cat-toggle" data-cat="azul">🐟 Pescado</span>
+        <span class="cat-toggle" data-cat="amarillo">🍝 Carbohidrato</span>
+        <span class="cat-toggle" data-cat="verde">🥦 Verdura</span>
+        <span class="cat-toggle" data-cat="marron">🫘 Legumbre</span>
+        <span class="cat-toggle" data-cat="morado">🥚 Huevo</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Temporada (marca las que apliquen)</label>
+      <div class="cat-picker" id="seasonPicker">
+        <span class="cat-toggle" data-s="calor">☀️ Calor</span>
+        <span class="cat-toggle" data-s="frio">❄️ Frío</span>
+      </div>
+      <p class="hint">Marca las dos para que valga todo el año.</p>
+    </div>
+    <div class="field">
+      <label>¿Para comer, cenar, o ambos?</label>
+      <div class="cat-picker" id="mealPicker">
+        <span class="cat-toggle" data-m="comida">Comida</span>
+        <span class="cat-toggle" data-m="cena">Cena</span>
+      </div>
+      <p class="hint">Marca las dos para que pueda salir en cualquiera de las dos.</p>
+    </div>
+    <div class="field">
+      <label>Ingredientes</label>
+      <div class="ingredient-input">
+        <input type="text" id="ingredientInput" placeholder="Ej: patata">
+        <button id="addIngredientBtn">Añadir</button>
+      </div>
+      <div class="ingredient-chips" id="ingredientChips"></div>
+    </div>
+    <div class="field">
+      <label>Instrucciones de preparación (opcional)</label>
+      <textarea id="instructionsInput" rows="4" placeholder="Ej: cocinar el pollo a la plancha, reservar..." style="width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);font-size:0.9rem;font-family:'Nunito',sans-serif;background:#fff;resize:vertical;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="cancelAddDish">Cancelar</button>
+      <button class="btn-primary" id="saveDishBtn">Guardar plato</button>
+    </div>
+    <button class="del-btn" id="deleteDishBtn" style="display:none;margin-top:14px;width:100%;text-align:center;">🗑️ Eliminar este plato</button>
+  </div>
+</div>
+
+<!-- Dish list -->
+<div class="overlay" id="dishListOverlay">
+  <div class="sheet">
+    <div class="sheet-header"><h2>Base de datos de platos</h2><button class="sheet-close" id="topCloseDishList">✕</button></div>
+    <div id="dishListContent"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="closeDishList">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ingredients popup (tap a dish in the weekly view) -->
+<div class="overlay" id="ingredientsOverlay">
+  <div class="sheet">
+    <div class="sheet-header"><h2 id="ingredientsDishName">Plato</h2><button class="sheet-close" id="topCloseIngredients">✕</button></div>
+    <div class="dish-dots" id="ingredientsDishDots" style="margin-bottom:14px;"></div>
+    <div class="field">
+      <label>Ingredientes</label>
+      <div id="ingredientsList"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="closeIngredients">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shopping list -->
+<div class="overlay" id="shoppingListOverlay">
+  <div class="sheet">
+    <div class="sheet-header"><h2>Lista de la compra</h2><button class="sheet-close" id="topCloseShoppingList">✕</button></div>
+    <p class="hint">Ingredientes de toda la semana. Debajo de cada uno, en qué día y plato hace falta.</p>
+    <div id="shoppingListContent"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="closeShoppingList">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  const CATEGORY_META = {
+    rojo:{label:'Carne', emoji:'🥩'},
+    azul:{label:'Pescado', emoji:'🐟'},
+    amarillo:{label:'Carbohidrato', emoji:'🍝'},
+    verde:{label:'Verdura', emoji:'🥦'},
+    marron:{label:'Legumbre', emoji:'🫘'},
+    morado:{label:'Huevo', emoji:'🥚'}
+  };
+  const DAY_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+
+  const DEFAULT_DISHES = [
+    {id:"macarrones-tomate", name:"Macarrones a la boloñesa", categories:["amarillo","rojo"], ingredients:[{"name":"macarrones","amount":160,"unit":"g","baseServings":2},{"name":"carne picada (mitad cerdo, mitad ternera)","amount":200,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria pequeña","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], family:"bolonesa",
+      instructions:"1. Rehogar la cebolla y la zanahoria picadas muy finas hasta que la cebolla esté transparente.\n2. Añadir la carne picada, salpimentar, y cocinar hasta que se dore.\n3. Incorporar el tomate triturado y cocer a fuego bajo unos 20 minutos.\n4. Cocer los macarrones con sal según el paquete, escurrir y mezclar con la salsa."},
+    {id:"macarrones-atun", name:"Macarrones con atún", categories:["amarillo","azul"], ingredients:[{"name":"macarrones","amount":160,"unit":"g","baseServings":2},{"name":"atún en lata (escurrido)","amount":1,"unit":"ud","baseServings":2},{"name":"tomate triturado","amount":300,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], cannedFish:true,
+      instructions:"1. Rehogar la cebolla picada en aceite hasta que esté blanda.\n2. Añadir el tomate triturado y cocinar 10 minutos a fuego medio.\n3. Incorporar el atún escurrido y mezclar bien, cocinar 2-3 minutos más.\n4. Cocer los macarrones según el paquete, escurrir y mezclar con la salsa."},
+    {id:"espaguetis-bolonesa", name:"Espaguetis a la boloñesa", categories:["amarillo","rojo"], ingredients:[{"name":"espaguetis","amount":160,"unit":"g","baseServings":2},{"name":"carne picada (mitad cerdo, mitad ternera)","amount":200,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria pequeña","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], family:"bolonesa",
+      instructions:"1. Rehogar la cebolla y la zanahoria picadas muy finas hasta que la cebolla esté transparente.\n2. Añadir la carne picada, salpimentar, y cocinar hasta que se dore.\n3. Incorporar el tomate triturado y cocer a fuego bajo unos 20 minutos.\n4. Cocer los espaguetis con sal según el paquete, escurrir y mezclar con la salsa."},
+    {id:"arroz-tomate", name:"Arroz con tomate y huevo", categories:["amarillo","morado"], ingredients:[{"name":"arroz","amount":160,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"],
+      instructions:"1. Cocer el arroz en agua con sal (el doble de agua que de arroz) hasta que esté en su punto; escurrir.\n2. Rehogar la cebolla en aceite, añadir el tomate triturado y cocinar 10 minutos.\n3. Freír o cocer los huevos por separado.\n4. Servir el arroz con la salsa de tomate y el huevo por encima."},
+    {id:"risotto", name:"Risotto de setas", categories:["amarillo"], ingredients:[{"name":"arroz arborio o bomba","amount":180,"unit":"g","baseServings":2},{"name":"champiñones","amount":150,"unit":"g","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"caldo de pollo","amount":700,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":30,"unit":"g","baseServings":2},{"name":"queso parmesano rallado"}], season:"ambas", types:["standalone"],
+      instructions:"1. Mantener el caldo caliente en un cazo aparte, a fuego bajo.\n2. Pochar el ajo y la cebolla picados en aceite; añadir los champiñones troceados y cocinar unos minutos.\n3. Añadir el arroz y rehogar 1-2 minutos hasta que quede translúcido.\n4. Ir incorporando el caldo caliente poco a poco, cucharón a cucharón, esperando a que se absorba antes de añadir más (unos 18 minutos en total), removiendo con frecuencia.\n5. Fuera del fuego, añadir la mantequilla y el queso parmesano y remover hasta que quede cremoso."},
+    {id:"gnocchi-verduras", name:"Gnocchi del Día con verduras", categories:["amarillo","verde"], ingredients:[{"name":"paquete de gnocchi del Día con verduras","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+      instructions:"1. Calentar una sartén con un poco de aceite.\n2. Añadir los gnocchi con verduras y saltear a fuego medio el tiempo indicado en el paquete, removiendo de vez en cuando."},
+    {id:"pollo-pure", name:"Filete de pollo con puré de patata", categories:["rojo","amarillo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"leche","amount":100,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":20,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+      instructions:"1. Cocer las patatas peladas y troceadas en agua con sal hasta que estén tiernas.\n2. Escurrir y chafarlas con un tenedor o pasapurés; añadir la leche y la mantequilla calientes y mezclar hasta que quede cremoso.\n3. Mientras, salpimentar los filetes de pollo y hacerlos a la plancha con un poco de aceite, 4-5 minutos por cada lado.\n4. Servir el filete con el puré al lado."},
+    {id:"croquetas", name:"Croquetas", categories:["rojo","amarillo"], ingredients:[{"name":"jamón picado","amount":100,"unit":"g","baseServings":2},{"name":"mantequilla","amount":50,"unit":"g","baseServings":2},{"name":"harina","amount":50,"unit":"g","baseServings":2},{"name":"leche","amount":500,"unit":"ml","baseServings":2},{"name":"pan rallado"},{"name":"huevo (para rebozar)","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], mealRestriction:"cena",
+      instructions:"1. Derretir la mantequilla y rehogar el jamón picado un par de minutos.\n2. Añadir la harina y cocinar 1-2 minutos sin dejar de remover.\n3. Verter la leche poco a poco sin dejar de remover hasta obtener una bechamel espesa; cocinar unos 15-20 minutos a fuego bajo.\n4. Dejar enfriar la masa (idealmente varias horas o de un día para otro).\n5. Formar las croquetas y pasarlas por harina, huevo batido y pan rallado.\n6. Freír en aceite bien caliente hasta que estén doradas."},
+    {id:"empanadillas-atun", name:"Empanadillas de atún", categories:["azul","amarillo"], ingredients:[{"name":"obleas de empanadilla","amount":8,"unit":"ud","baseServings":2},{"name":"atún en lata","amount":1,"unit":"ud","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"huevo cocido","amount":1,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"empanadillas", cannedFish:true, mealRestriction:"cena",
+      instructions:"1. Mezclar el atún escurrido con el tomate frito y el huevo cocido picado.\n2. Rellenar las obleas, doblar y sellar los bordes con un tenedor.\n3. Hornear a 200°C 15-18 minutos, o freír en aceite caliente hasta dorar."},
+    {id:"empanadillas-carne", name:"Empanadillas de carne", categories:["rojo","amarillo"], ingredients:[{"name":"obleas de empanadilla","amount":8,"unit":"ud","baseServings":2},{"name":"carne picada","amount":200,"unit":"g","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"empanadillas", mealRestriction:"cena",
+      instructions:"1. Rehogar la cebolla picada y añadir la carne picada hasta que se dore. Mezclar con el tomate frito.\n2. Rellenar las obleas, doblar y sellar los bordes con un tenedor.\n3. Hornear a 200°C 15-18 minutos, o freír en aceite caliente hasta dorar."},
+    {id:"lasana-canelones", name:"Lasaña / Canelones", categories:["amarillo","rojo"], ingredients:[{"name":"láminas de lasaña o canelones","amount":9,"unit":"ud","baseServings":2},{"name":"carne picada","amount":400,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"leche","amount":500,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":40,"unit":"g","baseServings":2},{"name":"harina","amount":40,"unit":"g","baseServings":2},{"name":"queso rallado","amount":100,"unit":"g","baseServings":2}], season:"ambas", types:["standalone"], family:"bolonesa", mealRestriction:"comida",
+      instructions:"1. Preparar la boloñesa: rehogar la cebolla y la zanahoria picadas, añadir la carne picada y dorar, incorporar el tomate y cocinar 20 minutos.\n2. Preparar la bechamel: derretir la mantequilla, añadir la harina y cocinar un minuto, incorporar la leche poco a poco sin dejar de remover hasta que espese; salpimentar.\n3. Cocer las láminas de pasta según el paquete si hace falta.\n4. Montar en capas en una fuente: pasta, boloñesa, un poco de bechamel, y repetir hasta terminar con bechamel.\n5. Cubrir con el queso rallado y gratinar en el horno unos 20-25 minutos hasta que esté dorado."},
+    {id:"gazpacho-salmorejo", name:"Gazpacho / Salmorejo", categories:["verde","rojo"], ingredients:[{"name":"tomate maduro","amount":600,"unit":"g","baseServings":2},{"name":"pan","amount":50,"unit":"g","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"vinagre"},{"name":"pepino y pimiento (para gazpacho)","amount":0.5,"unit":"ud","baseServings":2},{"name":"taquitos de jamón","amount":60,"unit":"g","baseServings":2},{"name":"huevo duro (para salmorejo)","amount":1,"unit":"ud","baseServings":2}], season:"calor", types:["standalone"], mealRestriction:"cena",
+      instructions:"Gazpacho: triturar el tomate, el pepino, el pimiento, el pan, el ajo, el aceite y el vinagre hasta que quede fino. Colar si se desea, y enfriar antes de servir. Servir con taquitos de jamón por encima.\n\nSalmorejo: triturar el tomate, el pan, el ajo y el aceite hasta obtener una crema espesa. Servir frío con huevo duro picado y taquitos de jamón por encima."},
+    {id:"ensaladilla-rusa", name:"Ensaladilla rusa", categories:["azul","amarillo","morado"], ingredients:[{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"atún en lata","amount":1,"unit":"ud","baseServings":2},{"name":"mayonesa","amount":100,"unit":"g","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"guisantes","amount":100,"unit":"g","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2}], season:"calor", types:["standalone"], cannedFish:true,
+      instructions:"1. Cocer la patata y la zanahoria troceadas junto con los guisantes hasta que estén tiernas.\n2. Cocer los huevos por separado.\n3. Escurrir bien las verduras, dejar templar y mezclar con el atún escurrido y la mayonesa.\n4. Picar uno de los huevos cocidos y mezclarlo; decorar con el otro huevo en rodajas."},
+    {id:"ensalada-cesar-pollo", name:"Ensalada César con pollo", categories:["verde","rojo","amarillo"], ingredients:[{"name":"lechuga","amount":150,"unit":"g","baseServings":2},{"name":"picatostes","amount":40,"unit":"g","baseServings":2},{"name":"pechuga de pollo empanada","amount":2,"unit":"ud","baseServings":2},{"name":"salsa césar"},{"name":"queso parmesano rallado"}], season:"ambas", types:["standalone"],
+      instructions:"1. Trocear la lechuga.\n2. Cocinar el pollo empanado (a la plancha o al horno) y cortarlo en tiras.\n3. Mezclar la lechuga con los picatostes y el pollo, añadir el parmesano, y aliñar con la salsa césar."},
+    {id:"pizza", name:"Pizza", categories:["amarillo","rojo"], ingredients:[{"name":"masa de pizza","amount":1,"unit":"ud","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"queso rallado","amount":150,"unit":"g","baseServings":2},{"name":"jamón york","amount":100,"unit":"g","baseServings":2}], season:"ambas", types:["standalone"], special:"tiktok", mealRestriction:"cena",
+      instructions:"1. Extender la masa de pizza en una bandeja.\n2. Cubrir con el tomate frito, el queso rallado y el jamón york (o los ingredientes que se prefieran).\n3. Hornear a 220°C 12-15 minutos hasta que el queso se dore."},
+    {id:"perritos-calientes", name:"Perritos calientes", categories:["rojo","amarillo"], ingredients:[{"name":"salchichas","amount":4,"unit":"ud","baseServings":2},{"name":"pan de perrito","amount":2,"unit":"ud","baseServings":2},{"name":"ketchup"},{"name":"mostaza"}], season:"ambas", types:["standalone"], special:"tiktok", mealRestriction:"cena",
+      instructions:"1. Cocer o calentar las salchichas.\n2. Calentar el pan de perrito.\n3. Colocar la salchicha en el pan y añadir ketchup y mostaza al gusto."},
+    {id:"fajitas", name:"Fajitas", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pollo en tiras","amount":300,"unit":"g","baseServings":2},{"name":"pimientos","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"tortillas de trigo","amount":4,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"tortilla-trigo", mealRestriction:"cena",
+      instructions:"1. Cortar el pollo en tiras y salpimentar.\n2. Saltear en una sartén con los pimientos y la cebolla en tiras hasta que estén hechos.\n3. Calentar las tortillas de trigo y rellenar con la mezcla."},
+    {id:"mayonesa-atun", name:"Wrap de atún y aguacate", categories:["azul","amarillo","verde"], ingredients:[{"name":"tortilla de trigo (fajita)","amount":2,"unit":"ud","baseServings":1},{"name":"tarrina de queso crema","amount":0.5,"unit":"ud","baseServings":1},{"name":"atún en lata","amount":1,"unit":"ud","baseServings":1},{"name":"aguacate","amount":0.5,"unit":"ud","baseServings":1},{"name":"cebolla morada","amount":0.5,"unit":"ud","baseServings":1},{"name":"cucharada de mostaza","amount":1.5,"unit":"ud","baseServings":1},{"name":"zumo de limón"}], season:"ambas", types:["standalone"], mealRestriction:"cena", special:"tiktok", cannedFish:true, family:"tortilla-trigo",
+      instructions:"1. Mezclar en un bol el atún escurrido, la cebolla morada picada fina, la mostaza y un chorro de zumo de limón.\n2. Untar la tortilla con el queso crema.\n3. Repartir por encima la mezcla de atún y el aguacate en láminas, y enrollar (2 wraps por persona)."},
+    {id:"pasta-alfredo", name:"Pasta Alfredo", categories:["amarillo","rojo"], ingredients:[{"name":"pechuga de pollo"},{"name":"aceite"},{"name":"sal"},{"name":"pimienta"},{"name":"pimentón"},{"name":"ajo (2 dientes)"},{"name":"leche (2 tazas)"},{"name":"caldo de pollo (2 tazas)"},{"name":"pasta"},{"name":"queso parmesano (1 taza)"}], season:"ambas", types:["standalone"], 
+      instructions:"1. Cocinar la pechuga de pollo en una sartén con aceite; salpimentar y añadir pimentón.\n2. Retirar el pollo y reservar.\n3. En la misma sartén, añadir el ajo picado.\n4. Añadir la leche y el caldo de pollo. Salpimentar de nuevo.\n5. Cocer la pasta en esta misma mezcla.\n6. Añadir el queso parmesano.\n7. Incorporar el pollo reservado y servir."},
+    {id:"pasta-pesto", name:"Pasta al pesto", categories:["amarillo","verde"], ingredients:[{"name":"pasta","amount":160,"unit":"g","baseServings":2},{"name":"pesto","amount":70,"unit":"g","baseServings":2},{"name":"queso parmesano rallado"}], season:"ambas", types:["standalone"],
+      instructions:"1. Cocer la pasta en agua con sal según el paquete, reservando un poco de agua de cocción antes de escurrir.\n2. Mezclar la pasta escurrida con el pesto fuera del fuego, añadiendo un par de cucharadas del agua reservada para que quede cremoso.\n3. Servir con queso parmesano por encima."},
+    {id:"burrito-pollo", name:"Burrito de pollo", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pollo","amount":300,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"aguacate","amount":1,"unit":"ud","baseServings":2},{"name":"tomate frito","amount":100,"unit":"g","baseServings":2},{"name":"queso rallado","amount":80,"unit":"g","baseServings":2},{"name":"tortilla de trigo","amount":2,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"tortilla-trigo", mealRestriction:"cena", special:"tiktok",
+      instructions:"1. Cocinar el pollo troceado con la cebolla hasta que esté hecho.\n2. Calentar la tortilla de trigo.\n3. Rellenar con el pollo, el tomate frito, el aguacate en láminas y el queso rallado, y enrollar."},
+    {id:"burrito-clasico", name:"Burrito clásico", categories:["rojo","amarillo","verde"], ingredients:[{"name":"pechuga de pollo"},{"name":"tomate"},{"name":"pimiento verde"},{"name":"cebolla"},{"name":"zumo de limón"},{"name":"sal"},{"name":"aguacate"},{"name":"cilantro"},{"name":"pepinillos"},{"name":"ketchup"},{"name":"mayonesa"},{"name":"mostaza"},{"name":"ajo en polvo"},{"name":"pimentón"},{"name":"curry"},{"name":"canela"},{"name":"arroz"},{"name":"tortilla de trigo"}], season:"ambas", types:["standalone"], family:"tortilla-trigo", mealRestriction:"cena", 
+      instructions:"Pico de gallo: mezclar tomate, pimiento verde y cebolla picados muy finos con un poco de zumo de limón y sal.\n\nGuacamole: machacar aguacate y mezclar con cebolla en cuadraditos, cilantro, zumo de limón y sal. Reservar.\n\nSalsa: mezclar pepinillos y cebolla picados con ketchup, mayonesa y un poco de mostaza. Reservar.\n\nPollo: cocinar la pechuga cortada en tiras finas y pequeñas. Sazonar con ajo en polvo, pimentón, un poco de curry y un poco de canela, y volver a cocinar brevemente para integrar los sabores.\n\nArroz: aliñar arroz blanco ya cocido con un poco de limón, cilantro y sal.\n\nMontaje: rellenar la tortilla con el arroz, el pollo, el pico de gallo, el guacamole y la salsa."},
+    {id:"pastel-patata-carne", name:"Pastel de carne y patata", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"patata","amount":3,"unit":"ud","baseServings":2},{"name":"leche","amount":100,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":20,"unit":"g","baseServings":2},{"name":"queso rallado","amount":80,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+      instructions:"1. Cocer las patatas peladas y troceadas en agua con sal; escurrir y hacer un puré con la leche y la mantequilla.\n2. Sofreír la carne picada salpimentada en una sartén con un poco de aceite hasta que se dore.\n3. Extender la carne en una fuente de cristal y cubrir con una capa de puré.\n4. Terminar con queso rallado por encima y gratinar al horno a 200°C unos 10-15 minutos, hasta que el queso se dore."},
+    {id:"judias-blancas", name:"Judías blancas", categories:["marron"], ingredients:[{"name":"alubias blancas cocidas","amount":300,"unit":"g","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"chorizo","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"aceite de oliva"},{"name":"hoja de laurel","amount":1,"unit":"ud","baseServings":2}], season:"frio", types:["standalone"], mealRestriction:"comida",
+      instructions:"1. Picar la cebolla y rehogar en aceite hasta que esté transparente.\n2. Añadir la zanahoria en rodajas y el chorizo troceado, cocinar unos minutos.\n3. Incorporar el pimentón y dar unas vueltas rápido.\n4. Añadir las alubias con su caldo (o cubrir de agua si son secas ya cocidas), el laurel, y cocer a fuego medio 15-20 minutos para que se integren los sabores."},
+    {id:"cada-uno-lo-suyo", name:"Cada uno lo suyo", categories:[], ingredients:[], season:"ambas", types:["standalone"], mealRestriction:"cena", note:"Sobras de la semana — cada uno se prepara lo que haya."},
+    {id:"tortilla-francesa", name:"Tortilla francesa", categories:["morado"], ingredients:[{"name":"huevo","amount":4,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"], mealRestriction:"cena",
+      instructions:"1. Batir los huevos con una pizca de sal.\n2. Calentar un poco de aceite en una sartén y verter los huevos batidos.\n3. Cuajar a fuego medio y doblar la tortilla por la mitad antes de que cuaje del todo."},
+    {id:"ensalada-garbanzos", name:"Ensalada de garbanzos", categories:["marron"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"maíz dulce","amount":100,"unit":"g","baseServings":2},{"name":"rúcula"},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["standalone","guarnicion"],
+      instructions:"1. Escurrir y enjuagar los garbanzos cocidos.\n2. Cortar el tomate en dados.\n3. Mezclar en un bol los garbanzos, el tomate, el maíz y la rúcula.\n4. Aliñar con aceite de oliva, vinagre y sal al gusto."},
+    {id:"ensalada-lentejas", name:"Ensalada de lentejas", categories:["marron","verde"], ingredients:[{"name":"lentejas cocidas","amount":400,"unit":"g","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"pepino","amount":0.5,"unit":"ud","baseServings":2},{"name":"cebolla morada","amount":0.25,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["standalone"],
+      instructions:"1. Escurrir y enjuagar las lentejas cocidas.\n2. Picar el tomate, el pimiento, el pepino y la cebolla en dados pequeños.\n3. Mezclar todo en un bol y aliñar con aceite de oliva, vinagre y sal.\n4. Dejar en la nevera 15-20 minutos antes de servir para que coja sabor."},
+    {id:"ensalada-alubias-atun", name:"Ensalada de alubias blancas con atún", categories:["marron","azul","verde"], ingredients:[{"name":"alubias blancas cocidas","amount":400,"unit":"g","baseServings":2},{"name":"atún en lata","amount":2,"unit":"ud","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento verde","amount":0.5,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.25,"unit":"ud","baseServings":2},{"name":"aceitunas negras"},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["standalone"], cannedFish:true,
+      instructions:"1. Escurrir y enjuagar las alubias cocidas.\n2. Picar el tomate, los pimientos y la cebolla en dados pequeños.\n3. Mezclar en un bol con las alubias, el atún escurrido y las aceitunas.\n4. Aliñar con aceite de oliva, vinagre y sal, y dejar en la nevera 15-20 minutos antes de servir."},
+    {id:"garbanzos-espinacas", name:"Garbanzos con verduras y espinacas", categories:["marron","verde"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"espinacas","amount":300,"unit":"g","baseServings":2},{"name":"cebolla","amount":1,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":2,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"aceite de oliva"}], season:"frio", types:["standalone"], family:"guiso-garbanzos",
+      instructions:"1. Picar la cebolla y el ajo y rehogar en aceite de oliva hasta que doren.\n2. Añadir el pimentón, remover rápido, e incorporar las espinacas troceadas.\n3. Cocinar hasta que las espinacas se reduzcan.\n4. Añadir los garbanzos escurridos, mezclar y cocinar unos minutos más. Rectificar de sal."},
+    {id:"lentejas", name:"Lentejas", categories:["marron"], ingredients:[{"name":"lentejas","amount":150,"unit":"g","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"chorizo","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"aceite de oliva"}], season:"frio", types:["standalone"], mealRestriction:"comida",
+      instructions:"1. Picar la cebolla y el ajo y sofreír en aceite hasta dorar.\n2. Añadir el chorizo en rodajas y el pimentón, dar unas vueltas.\n3. Incorporar la zanahoria en rodajas, rehogar un par de minutos.\n4. Añadir las lentejas, cubrir con agua y salpimentar.\n5. Cocer a fuego medio unos 30 minutos, añadiendo la patata troceada a mitad de cocción."},
+    {id:"potaje", name:"Potaje", categories:["marron"], ingredients:[{"name":"garbanzos cocidos","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":1,"unit":"ud","baseServings":2},{"name":"zanahoria","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento rojo","amount":0.5,"unit":"ud","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"caldo de verduras","amount":500,"unit":"ml","baseServings":2}], season:"frio", types:["standalone"], family:"guiso-garbanzos",
+      instructions:"1. Sofreír la cebolla picada en aceite de oliva 5-7 minutos.\n2. Añadir el ajo y el pimiento rojo, cocinar unos minutos más.\n3. Incorporar la zanahoria y la patata en trozos, el pimentón, y los garbanzos escurridos.\n4. Cubrir con el caldo de verduras y cocer a fuego medio 20-25 minutos, hasta que las verduras estén tiernas."},
+    {id:"pollo-asado", name:"Pollo asado con patatas", categories:["rojo","amarillo"], ingredients:[{"name":"muslos de pollo","amount":4,"unit":"ud","baseServings":2},{"name":"patata mediana","amount":2,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"pimentón dulce"}], season:"frio", types:["standalone"], mealRestriction:"comida",
+      instructions:"1. Precalentar el horno a 200°C.\n2. Cortar las patatas en rodajas y la cebolla en juliana; colocar en la bandeja de horno, salpimentar y regar con aceite.\n3. Colocar el pollo encima, salpimentar, añadir los ajos y el pimentón.\n4. Hornear 45-50 minutos, dando la vuelta al pollo a mitad de cocción."},
+    {id:"pollo-plancha", name:"Pollo a la plancha", categories:["rojo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Salpimentar las pechugas de pollo.\n2. Cocinar en una plancha o sartén con un poco de aceite, 4-5 minutos por cada lado hasta que estén doradas y hechas por dentro."},
+    {id:"pollo-curry-limon", name:"Pollo al curry o limón", categories:["rojo"], ingredients:[{"name":"pechuga de pollo","amount":2,"unit":"ud","baseServings":2},{"name":"curry en polvo o zumo de limón"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Cortar el pollo en trozos y salpimentar.\n2. Cocinar en una sartén con aceite hasta dorar por todos los lados.\n3. Añadir el curry en polvo (o el zumo de limón) y un poco de agua, y cocinar 5 minutos más para que se integren los sabores."},
+    {id:"filete-ternera", name:"Filete de ternera a la plancha", categories:["rojo"], ingredients:[{"name":"filete de ternera","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Salpimentar los filetes.\n2. Cocinar en una plancha muy caliente con un poco de aceite, 2-3 minutos por cada lado según el punto deseado."},
+    {id:"filetes-rusos", name:"Filetes rusos", categories:["rojo"], ingredients:[{"name":"carne picada (mitad cerdo, mitad ternera)","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"pan rallado","amount":20,"unit":"g","baseServings":2},{"name":"diente de ajo","amount":1,"unit":"ud","baseServings":2},{"name":"perejil"},{"name":"harina para rebozar"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Mezclar la carne picada con el huevo, el pan rallado, el ajo picado y el perejil; salpimentar.\n2. Formar filetes finos y planos con las manos.\n3. Rebozar en harina por ambos lados.\n4. Freír en aceite caliente hasta dorar por los dos lados."},
+    {id:"albondigas", name:"Albóndigas con patatas", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"pan rallado","amount":30,"unit":"g","baseServings":2},{"name":"tomate triturado","amount":300,"unit":"g","baseServings":2},{"name":"patata mediana","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+      instructions:"1. Mezclar la carne picada con el huevo, el pan rallado y sal; formar bolitas.\n2. Freír las albóndigas en aceite hasta que se doren por fuera.\n3. Añadir el tomate triturado y cocinar a fuego bajo 15 minutos.\n4. Freír o asar las patatas en dados y servir junto a las albóndigas."},
+    {id:"hamburguesa", name:"Hamburguesa", categories:["rojo","amarillo"], ingredients:[{"name":"carne picada","amount":300,"unit":"g","baseServings":2},{"name":"pan de hamburguesa","amount":2,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], special:"tiktok", mealRestriction:"cena",
+      instructions:"1. Formar las hamburguesas con la carne picada salpimentada.\n2. Cocinar en la plancha 3-4 minutos por cada lado.\n3. Servir en el pan de hamburguesa."},
+    {id:"merluza", name:"Merluza a la plancha o rebozada", categories:["azul"], ingredients:[{"name":"filete de merluza","amount":2,"unit":"ud","baseServings":2},{"name":"harina"},{"name":"huevo","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"A la plancha: secar los filetes con papel de cocina, salar por los dos lados y cocinar en una plancha caliente con un poco de aceite, 2-3 minutos por cada lado.\n\nRebozada: salar los filetes, pasarlos primero por harina y luego por huevo batido, y freír en aceite caliente hasta dorar por ambos lados."},
+    {id:"salmon", name:"Salmón a la plancha", categories:["azul"], ingredients:[{"name":"filete de salmón","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Salpimentar los filetes de salmón.\n2. Cocinar en una plancha caliente con un poco de aceite, con la piel hacia abajo primero, 3-4 minutos por cada lado."},
+    {id:"atun-plancha", name:"Atún a la plancha", categories:["azul"], ingredients:[{"name":"rodaja de atún","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Salpimentar las rodajas de atún.\n2. Cocinar en una plancha muy caliente con un poco de aceite, 1-2 minutos por cada lado para que quede jugoso por dentro."},
+    {id:"boquerones", name:"Boquerones", categories:["azul"], ingredients:[{"name":"boquerones limpios","amount":300,"unit":"g","baseServings":2},{"name":"harina"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Salar los boquerones y pasarlos por harina.\n2. Freír en abundante aceite bien caliente hasta que estén dorados y crujientes.\n3. Escurrir sobre papel absorbente antes de servir."},
+    {id:"dorada-horno", name:"Dorada al horno", categories:["azul"], ingredients:[{"name":"dorada limpia (una por persona)","amount":2,"unit":"ud","baseServings":2},{"name":"limón","amount":1,"unit":"ud","baseServings":2},{"name":"diente de ajo","amount":2,"unit":"ud","baseServings":2},{"name":"perejil"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. Precalentar el horno a 200°C.\n2. Hacer 2-3 cortes en cada lado de la dorada, salpimentar por dentro y por fuera, y meter rodajas de limón en los cortes.\n3. Colocar en una bandeja de horno y regar con el ajo y el perejil picados mezclados con un buen chorro de aceite de oliva.\n4. Hornear 20-25 minutos, hasta que la carne se separe fácilmente de la espina."},
+    {id:"cazon-adobo", name:"Cazón en adobo", categories:["azul"], ingredients:[{"name":"cazón en tacos","amount":400,"unit":"g","baseServings":2},{"name":"vinagre de vino","amount":60,"unit":"ml","baseServings":2},{"name":"agua","amount":60,"unit":"ml","baseServings":2},{"name":"diente de ajo","amount":3,"unit":"ud","baseServings":2},{"name":"pimentón dulce"},{"name":"comino molido"},{"name":"orégano"},{"name":"harina (mejor de garbanzo)"},{"name":"aceite de oliva"}], season:"ambas", types:["principal"],
+      instructions:"1. La noche anterior (o al menos 4 horas antes): mezclar el vinagre, el agua, los ajos machacados, una cucharadita de pimentón, media de comino, una pizca de orégano y sal. Cubrir el cazón con el adobo y dejarlo en la nevera tapado.\n2. Escurrir bien los tacos de cazón y pasarlos por harina, sacudiendo el exceso.\n3. Freír en abundante aceite bien caliente hasta que estén dorados.\n4. Escurrir sobre papel absorbente antes de servir."},
+    {id:"menestra", name:"Menestra de verduras", categories:["verde"], ingredients:[{"name":"verduras variadas (zanahoria, judías verdes, guisantes, coliflor)","amount":300,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["guarnicion"],
+      instructions:"1. Cocer las verduras en agua con sal hasta que estén tiernas.\n2. Escurrir y saltear un par de minutos en una sartén con un poco de aceite de oliva."},
+    {id:"ensalada-mixta", name:"Ensalada mixta", categories:["verde"], ingredients:[{"name":"lechuga","amount":100,"unit":"g","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.25,"unit":"ud","baseServings":2},{"name":"aceite de oliva"},{"name":"vinagre"}], season:"calor", types:["guarnicion"],
+      instructions:"1. Lavar y trocear la lechuga y el tomate.\n2. Cortar la cebolla en tiras finas.\n3. Mezclar todo y aliñar con aceite, vinagre y sal."},
+    {id:"ensalada-tomate", name:"Ensalada de tomate", categories:["verde"], ingredients:[{"name":"tomate","amount":2,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.25,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"calor", types:["guarnicion"],
+      instructions:"1. Cortar el tomate en rodajas y la cebolla en tiras finas.\n2. Aliñar con aceite de oliva y sal."},
+    {id:"ensalada-cesar", name:"Ensalada césar", categories:["verde"], ingredients:[{"name":"lechuga","amount":100,"unit":"g","baseServings":2},{"name":"picatostes","amount":30,"unit":"g","baseServings":2},{"name":"queso parmesano rallado"},{"name":"salsa césar"}], season:"calor", types:["guarnicion"],
+      instructions:"1. Trocear la lechuga.\n2. Mezclar con los picatostes y el parmesano.\n3. Aliñar con la salsa césar justo antes de servir."},
+    {id:"ensalada-variada", name:"Ensalada variada", categories:["verde"], ingredients:[{"name":"lechuga, rúcula o espinaca","amount":100,"unit":"g","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"aguacate","amount":0.5,"unit":"ud","baseServings":2},{"name":"queso fresco","amount":50,"unit":"g","baseServings":2},{"name":"maíz dulce","amount":50,"unit":"g","baseServings":2},{"name":"aceitunas"}], season:"calor", types:["guarnicion"],
+      instructions:"1. Trocear la base de hoja verde, el tomate y el aguacate.\n2. Añadir el queso fresco en dados, el maíz y las aceitunas.\n3. Aliñar con aceite de oliva y sal."},
+    {id:"judias-patata", name:"Judías verdes con patata", categories:["verde","amarillo"], ingredients:[{"name":"judías verdes","amount":200,"unit":"g","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["guarnicion"],
+      instructions:"1. Cocer las judías verdes y la patata troceada juntas en agua con sal hasta que estén tiernas.\n2. Escurrir y saltear un par de minutos con un poco de aceite."},
+    {id:"judias-patata-jamon", name:"Judías verdes con patata y jamón", categories:["verde","amarillo","rojo"], ingredients:[{"name":"judías verdes","amount":200,"unit":"g","baseServings":2},{"name":"patata","amount":1,"unit":"ud","baseServings":2},{"name":"taquitos de jamón","amount":50,"unit":"g","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+      instructions:"1. Cocer las judías verdes y la patata troceada juntas en agua con sal hasta que estén tiernas.\n2. Escurrir y saltear con los taquitos de jamón un par de minutos."},
+    {id:"arroz-blanco", name:"Arroz blanco", categories:["amarillo"], ingredients:[{"name":"arroz","amount":150,"unit":"g","baseServings":2},{"name":"sal"}], season:"ambas", types:["guarnicion"],
+      instructions:"1. Cocer el arroz en agua con sal (el doble de agua que de arroz) según el tiempo indicado en el paquete.\n2. Escurrir bien antes de servir."},
+    {id:"verdura-plancha", name:"Verdura a la plancha", categories:["verde"], ingredients:[{"name":"calabacín","amount":1,"unit":"ud","baseServings":2},{"name":"berenjena","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento","amount":0.5,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["guarnicion"],
+      instructions:"1. Cortar las verduras en rodajas o tiras.\n2. Cocinar en una plancha caliente con un poco de aceite hasta que estén tiernas y doradas por ambos lados."},
+    {id:"patatas-asadas", name:"Patatas asadas", categories:["amarillo"], ingredients:[{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["guarnicion"],
+      instructions:"1. Cortar las patatas en gajos.\n2. Aliñar con aceite de oliva y sal.\n3. Hornear a 200°C durante 30-35 minutos, dándoles la vuelta a mitad de cocción."},
+    {id:"pure-patata-guarnicion", name:"Puré de patata", categories:["amarillo"], ingredients:[{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"leche","amount":100,"unit":"ml","baseServings":2},{"name":"mantequilla","amount":20,"unit":"g","baseServings":2}], season:"ambas", types:["guarnicion"],
+      instructions:"1. Cocer las patatas peladas hasta que estén tiernas.\n2. Chafarlas con un tenedor o pasapurés.\n3. Añadir la leche y la mantequilla calientes y mezclar hasta que quede cremoso."},
+    {id:"patatas-fritas", name:"Patatas fritas", categories:["amarillo"], ingredients:[{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["guarnicion"],
+      instructions:"1. Pelar y cortar las patatas en bastones.\n2. Freír en abundante aceite caliente hasta que estén doradas.\n3. Escurrir sobre papel absorbente y salar."},
+    {id:"pure-verduras", name:"Puré de verduras con huevo cocido", categories:["verde","morado"], ingredients:[{"name":"verduras variadas (puerro, calabacín, zanahoria)","amount":400,"unit":"g","baseServings":2},{"name":"huevo cocido","amount":1,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"crema",
+      instructions:"1. Cocer las verduras troceadas en agua con sal hasta que estén tiernas.\n2. Triturar hasta obtener un puré fino, ajustando con un poco del agua de cocción si hace falta.\n3. Servir con el huevo cocido troceado por encima."},
+    {id:"pisto", name:"Pisto con huevo", categories:["verde","morado"], ingredients:[{"name":"pimiento rojo","amount":1,"unit":"ud","baseServings":2},{"name":"pimiento verde","amount":1,"unit":"ud","baseServings":2},{"name":"cebolla pequeña","amount":1,"unit":"ud","baseServings":2},{"name":"calabacín","amount":1,"unit":"ud","baseServings":2},{"name":"tomate triturado","amount":300,"unit":"g","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"calor", types:["standalone"],
+      instructions:"1. Sofreír la cebolla y los pimientos picados en aceite de oliva unos 10 minutos.\n2. Añadir el calabacín en dados y cocinar unos minutos más.\n3. Incorporar el tomate triturado, salpimentar y cocinar a fuego bajo unos 20 minutos, hasta que se evapore el agua del tomate.\n4. Servir con un huevo frito por encima (o cascar los huevos sobre el pisto al final, tapar y dejar que cuajen)."},
+    {id:"tortilla-patata", name:"Tortilla de patata", categories:["morado","amarillo"], ingredients:[{"name":"patata mediana","amount":2,"unit":"ud","baseServings":2},{"name":"huevo","amount":4,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+      instructions:"1. Pelar y cortar las patatas en láminas finas.\n2. Freír las patatas (y la cebolla, si se usa) en abundante aceite a fuego medio hasta que estén tiernas, unos 10-12 minutos.\n3. Escurrir el aceite y mezclar con los huevos batidos y sal.\n4. Cuajar la mezcla en una sartén con un poco de aceite, dando la vuelta a mitad de cocción con ayuda de un plato."},
+    {id:"huevos-fritos-patatas", name:"Huevos fritos con patatas", categories:["morado","amarillo"], ingredients:[{"name":"patata","amount":2,"unit":"ud","baseServings":2},{"name":"huevo","amount":4,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"],
+      instructions:"1. Cortar las patatas en bastones y freír en aceite caliente hasta que estén doradas.\n2. Freír los huevos en el mismo aceite hasta que la clara esté cuajada y la yema al gusto.\n3. Servir juntos."},
+    {id:"sopa-fideos", name:"Sopa de fideos con pollo y huevo", categories:["amarillo","rojo","morado"], ingredients:[{"name":"fideos","amount":80,"unit":"g","baseServings":2},{"name":"caldo de pollo","amount":700,"unit":"ml","baseServings":2},{"name":"pechuga de pollo","amount":1,"unit":"ud","baseServings":2},{"name":"huevo","amount":2,"unit":"ud","baseServings":2}], season:"frio", types:["standalone"],
+      instructions:"1. Cocer los huevos 10 minutos, enfriarlos, pelarlos y picarlos.\n2. Cocer la pechuga de pollo en el caldo unos 15 minutos; sacarla y desmenuzarla.\n3. Llevar el caldo de nuevo a ebullición, añadir los fideos y cocer el tiempo indicado en el paquete, unos 5-8 minutos.\n4. Añadir el pollo desmenuzado y el huevo picado, y servir bien caliente."},
+    {id:"cocido", name:"Cocido", categories:["rojo","marron","verde"], ingredients:[{"name":"garbanzos cocidos","amount":300,"unit":"g","baseServings":2},{"name":"carne para cocido (morcillo o pollo)","amount":300,"unit":"g","baseServings":2},{"name":"verduras variadas (repollo, zanahoria, patata)","amount":300,"unit":"g","baseServings":2}], season:"frio", types:["standalone"], family:"guiso-garbanzos", mealRestriction:"comida",
+      instructions:"1. Cocer la carne en agua abundante durante aproximadamente 1 hora, retirando la espuma que suelte.\n2. Añadir los garbanzos y las verduras troceadas y seguir cociendo 45 minutos más.\n3. Servir el caldo como primer plato y los garbanzos, la carne y las verduras como segundo."},
+    {id:"crema-calabacin", name:"Crema de calabacín con huevo cocido", categories:["verde","morado"], ingredients:[{"name":"calabacín","amount":2,"unit":"ud","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"caldo de verduras","amount":400,"unit":"ml","baseServings":2},{"name":"huevo cocido","amount":1,"unit":"ud","baseServings":2}], season:"ambas", types:["standalone"], family:"crema",
+      instructions:"1. Rehogar la cebolla picada en un poco de aceite.\n2. Añadir el calabacín troceado y el caldo, y cocer 15-20 minutos hasta que esté tierno.\n3. Triturar hasta obtener una crema fina.\n4. Servir con el huevo cocido troceado por encima."},
+    {id:"crema-calabaza", name:"Crema de calabaza con huevo cocido", categories:["verde","morado"], ingredients:[{"name":"calabaza","amount":400,"unit":"g","baseServings":2},{"name":"cebolla","amount":0.5,"unit":"ud","baseServings":2},{"name":"caldo de verduras","amount":400,"unit":"ml","baseServings":2},{"name":"huevo cocido","amount":1,"unit":"ud","baseServings":2}], season:"frio", types:["standalone"], family:"crema",
+      instructions:"1. Rehogar la cebolla picada en un poco de aceite.\n2. Añadir la calabaza troceada y el caldo, y cocer 20-25 minutos hasta que esté tierna.\n3. Triturar hasta obtener una crema fina.\n4. Servir con el huevo cocido troceado por encima."},
+    {id:"tostadas", name:"Tostadas", categories:["amarillo"], ingredients:[{"name":"pan de molde o similar","amount":4,"unit":"ud","baseServings":2},{"name":"tomate","amount":1,"unit":"ud","baseServings":2},{"name":"aceite de oliva"}], season:"ambas", types:["standalone"], mealRestriction:"cena",
+      instructions:"1. Tostar el pan.\n2. Untar con tomate rallado y un chorrito de aceite de oliva."}
+  ];
+  const DISHES_VERSION = 19;
+  const TYPE_LABELS = {
+    principal: 'Principal (necesita guarnición)',
+    guarnicion: 'Guarnición',
+    standalone: 'Plato único'
+  };
+
+  function defaultSeason(){
+    const m = new Date().getMonth()+1;
+    return (m>=5 && m<=9) ? 'calor' : 'frio';
+  }
+  const DEFAULT_PREFS = { fishFrequency: 2, season: defaultSeason(), servings: 2 };
+
+  // ---- storage helpers ----
+  async function storageGet(key, fallback){
+    try{
+      const raw = localStorage.getItem('menuSemanal:' + key);
+      if (raw === null) return fallback;
+      return JSON.parse(raw);
+    }catch(e){ return fallback; }
+  }
+  async function storageSet(key, value){
+    try{ localStorage.setItem('menuSemanal:' + key, JSON.stringify(value)); }
+    catch(e){ console.error('No se pudo guardar', key, e); }
+  }
+
+  // ---- state ----
+  let dishes = [];
+  let prefs = {...DEFAULT_PREFS};
+  let currentMenu = null;
+  let previousMenu = null;
+  let dayAttempts = [0,0,0,0,0];
+  let ingredientDraft = [];
+  let selectedCats = [];
+  let selectedSeasons = ['calor','frio'];
+  let selectedTypes = ['standalone'];
+  let selectedMeals = ['comida','cena'];
+  let editingDishId = null;
+  let returnToDishList = false;
+
+  function dishById(id){ return dishes.find(d=>d.id===id); }
+
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  // "media cebolla" / "medio aguacate": femenino si la primera palabra acaba en -a.
+  function countLabel(n, name){
+    const first = String(name || '').trim().split(/\s+/)[0];
+    const half = (!first || /a$/i.test(first)) ? 'media' : 'medio';
+    if (n === 0.5) return half;
+    if (n % 1 === 0.5) return `${Math.floor(n)} y ${half}`;
+    return String(n);
+  }
+
+  // Cantidad escalada y redondeada de un ingrediente (null si no tiene cantidad).
+  function scaledAmount(ing, servings){
+    if (ing.amount == null || !ing.unit) return null;
+    const base = ing.baseServings || 2;
+    const raw = ing.amount * ((servings || 2) / base);
+    if (ing.unit === 'ud') return Math.max(0.5, Math.round(raw * 2) / 2);
+    if (raw < 10) return Math.round(raw * 2) / 2;
+    return Math.round(raw / 5) * 5;
+  }
+
+  function amountText(n, unit, name){
+    return (unit === 'g' || unit === 'ml') ? `${n}${unit}` : countLabel(n, name);
+  }
+
+  function formatIngredient(ing, servings){
+    const n = scaledAmount(ing, servings);
+    if (n === null) return ing.name;
+    if (ing.unit === 'g' || ing.unit === 'ml') return `${n}${ing.unit} de ${ing.name}`;
+    return `${countLabel(n, ing.name)} ${ing.name}`;
+  }
+
+  function slotCategories(slot){
+    const main = dishById(slot.main);
+    const cats = new Set(main ? main.categories : []);
+    if (slot.garnish){
+      const g = dishById(slot.garnish);
+      if (g) g.categories.forEach(c=>cats.add(c));
+    }
+    return Array.from(cats);
+  }
+
+  function slotDisplay(slot){
+    const main = dishById(slot.main);
+    if (!main) return { name: '—', cats: [] };
+    const garnish = slot.garnish ? dishById(slot.garnish) : null;
+    const name = garnish ? `${escapeHtml(main.name)} con ${escapeHtml(garnish.name)}` : escapeHtml(main.name);
+    return { name, cats: slotCategories(slot) };
+  }
+
+  function isGarnishEligible(d){
+    return (d.types||['standalone']).includes('guarnicion');
+  }
+
+  function pickGarnish(pool, avoidId, excludeCategories){
+    excludeCategories = excludeCategories || [];
+    const options = pool.filter(isGarnishEligible);
+    if (!options.length) return null;
+    let candidates = excludeCategories.length
+      ? options.filter(d => !d.categories.some(c => excludeCategories.includes(c)))
+      : options.slice();
+    if (!candidates.length) candidates = options.slice();
+    const filtered = avoidId ? candidates.filter(d=>d.id!==avoidId) : candidates;
+    const finalOpts = filtered.length ? filtered : candidates;
+    return finalOpts[Math.floor(Math.random()*finalOpts.length)].id;
+  }
+
+  function buildSlot(mainDish, pool, avoidGarnishId, excludeCategories){
+    const needsGarnish = (mainDish.types||['standalone']).includes('principal');
+    return { main: mainDish.id, garnish: needsGarnish ? pickGarnish(pool, avoidGarnishId, excludeCategories) : null };
+  }
+
+  function normalizeSlot(slot){
+    if (slot === null || slot === undefined) return null;
+    if (typeof slot === 'string') return { main: slot, garnish: null };
+    return slot;
+  }
+
+  function normalizeMenu(menu){
+    if (!menu) return menu;
+    menu.days.forEach(d=>{
+      d.comida = normalizeSlot(d.comida);
+      d.cena = normalizeSlot(d.cena);
+    });
+    return menu;
+  }
+
+  function seasonPool(){
+    return dishes.filter(d => d.season === 'ambas' || d.season === prefs.season);
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for (let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function chooseDish(pool, opts){
+    opts = opts || {};
+    const excludeIds = opts.excludeIds || [];
+    const softExcludeIds = opts.softExcludeIds || [];
+    const excludeCategories = opts.excludeCategories || [];
+    const mealType = opts.mealType;
+
+    let candidates = pool.filter(d => !excludeIds.includes(d.id));
+    if (excludeCategories.length){
+      candidates = candidates.filter(d => !d.categories.some(c => excludeCategories.includes(c)));
+    }
+    if (!candidates.length) candidates = pool.filter(d => !excludeIds.includes(d.id));
+    if (!candidates.length) candidates = pool.slice();
+
+    let soft = candidates.filter(d => !softExcludeIds.includes(d.id));
+    let finalPool = soft.length ? soft : candidates;
+
+    if (mealType === 'cena'){
+      const weighted = [];
+      finalPool.forEach(d=>{
+        const w = (d.categories.includes('azul') || d.categories.includes('verde')) ? 2 : 1;
+        for (let i=0;i<w;i++) weighted.push(d);
+      });
+      return weighted[Math.floor(Math.random()*weighted.length)];
+    }
+    return finalPool[Math.floor(Math.random()*finalPool.length)];
+  }
+
+  // Excluye los platos ya usados en la semana (salvo los de solo verdura) y, además,
+  // todos los de su misma "familia" (dos cremas, dos boloñesas, dos guisos de garbanzos...).
+  function usedThisWeekExclusions(usedMap){
+    const out = new Set();
+    Object.keys(usedMap).forEach(id => {
+      const d = dishById(id);
+      if (!d){ out.add(id); return; }
+      const isPureVeg = d.categories.length === 1 && d.categories[0] === 'verde';
+      if (!isPureVeg) out.add(id);
+      if (d.family) dishes.forEach(x => { if (x.family === d.family) out.add(x.id); });
+    });
+    return Array.from(out);
+  }
+
+  // Pescado "de verdad": cuenta para el mínimo semanal. El atún en lata no cuenta.
+  function isRealFish(d){ return !!d && d.categories.includes('azul') && !d.cannedFish; }
+  function isLegume(d){ return !!d && d.categories.includes('marron'); }
+
+  function poolForMeal(pool, meal){
+    return pool.filter(d => !d.mealRestriction || d.mealRestriction === meal);
+  }
+
+  function mainEligiblePool(pool, meal){
+    return poolForMeal(pool, meal).filter(d => {
+      const types = d.types || ['standalone'];
+      return types.includes('standalone') || types.includes('principal');
+    });
+  }
+
+  function dishHasSpecial(id, tag){
+    const d = dishById(id);
+    return !!d && d.special === tag;
+  }
+
+  function ensureFishQuota(days, pool, target){
+    let fishCount = days.reduce((acc,d)=> acc + ['comida','cena'].filter(meal=> isRealFish(dishById(d[meal].main))).length, 0);
+    if (fishCount >= target) return;
+    const usedMainIds = new Set(days.flatMap(d=>[d.comida.main, d.cena.main]));
+    // 1ª pasada: solo en días cuyo otro plato no sea ya pescado. 2ª pasada: donde sea.
+    for (let pass=0; pass<2 && fishCount<target; pass++)
+    for (let i=0;i<days.length && fishCount<target;i++){
+      for (const meal of ['cena','comida']){
+        if (fishCount>=target) break;
+        const otherMain = dishById(days[i][meal==='comida' ? 'cena' : 'comida'].main);
+        if (pass===0 && otherMain && otherMain.categories.includes('azul')) continue;
+        const currentMain = dishById(days[i][meal].main);
+        // No se sustituye un plato de legumbre (se perdería la legumbre mínima de la semana).
+        if (currentMain && !isRealFish(currentMain) && !isLegume(currentMain)){
+          let fishCandidates = pool.filter(d => {
+            if (!isRealFish(d)) return false;
+            if (d.mealRestriction && d.mealRestriction !== meal) return false;
+            const types = d.types || ['standalone'];
+            return types.includes('standalone') || types.includes('principal');
+          });
+          const tiktokUsedElsewhere = days.some((d,idx)=> !(idx===i && meal==='cena') && dishHasSpecial(d.cena.main,'tiktok'));
+          if (tiktokUsedElsewhere) fishCandidates = fishCandidates.filter(d=>d.special!=='tiktok');
+          fishCandidates = shuffle(fishCandidates);
+          if (!fishCandidates.length) continue;
+          const otherMeal = meal==='comida' ? 'cena' : 'comida';
+          const otherCats = slotCategories(days[i][otherMeal]);
+          const otherHasCarb = otherCats.includes('amarillo');
+          const carbOk = d => !(otherHasCarb && d.categories.includes('amarillo'));
+          let candidate = fishCandidates.find(d => !usedMainIds.has(d.id) && carbOk(d));
+          if (!candidate) candidate = fishCandidates.find(carbOk);
+          if (candidate){
+            usedMainIds.delete(days[i][meal].main);
+            const excludeCats = otherHasCarb ? ['amarillo'] : [];
+            days[i][meal] = buildSlot(candidate, pool, days[i][otherMeal].garnish, excludeCats);
+            usedMainIds.add(candidate.id);
+            fishCount++;
+          }
+        }
+      }
+    }
+  }
+
+  function generateWeek(){
+    const pool = seasonPool();
+    if (pool.length < 6){
+      alert('Necesitas más platos en la base de datos para esta temporada antes de generar un menú equilibrado.');
+      return;
+    }
+    const usedThisWeek = {};
+    const prevMainIds = previousMenu ? previousMenu.days.flatMap(d=>[d.comida.main, d.cena.main]) : [];
+    const fishTarget = prefs.fishFrequency;
+    const fishDays = shuffle([0,1,2,3,4]).slice(0, fishTarget);
+    // Un día con legumbre obligatoria en la comida (mínimo 1 por semana).
+    const legDay = Math.floor(Math.random()*5);
+    // Cada día de pescado lo pone en la comida o en la cena (el día de legumbre, siempre en la cena).
+    // 30% cena porque la cena ya favorece el pescado por sí sola: así queda ~50/50 entre comida y cena.
+    const fishMeal = {};
+    fishDays.forEach(i => { fishMeal[i] = (i === legDay || Math.random() < 0.3) ? 'cena' : 'comida'; });
+    const days = [];
+    let tiktokUsedThisWeek = false;
+    // Si quedan tan pocos pescados sin usar como días de pescado pendientes, se "reservan":
+    // se evitan en los demás huecos para no tener que repetir pescado en la semana.
+    const realFishIds = pool.filter(isRealFish).map(d=>d.id);
+    const fishReserve = (pendingForced) =>
+      realFishIds.filter(id => !usedThisWeek[id]).length <= pendingForced ? realFishIds : [];
+
+    for (let i=0;i<5;i++){
+      const needsFish = fishDays.includes(i);
+      const laterFishDays = fishDays.filter(j => j > i).length;
+
+      let comidaPool = mainEligiblePool(pool, 'comida');
+      const excludeIds1 = usedThisWeekExclusions(usedThisWeek);
+      if (fishMeal[i] === 'comida'){
+        const fishOnly = comidaPool.filter(isRealFish);
+        if (fishOnly.length) comidaPool = fishOnly;
+      } else if (i === legDay && !days.some(d => isLegume(dishById(d.comida.main)))){
+        const allLeg = comidaPool.filter(isLegume);
+        const freshLeg = allLeg.filter(d => !excludeIds1.includes(d.id));
+        const legOnly = freshLeg.length ? freshLeg : allLeg.filter(d => !usedThisWeek[d.id]);
+        if (legOnly.length) comidaPool = legOnly;
+        else if (allLeg.length) comidaPool = allLeg;
+      }
+      const comidaSoft = fishMeal[i] === 'comida' ? prevMainIds
+        : prevMainIds.concat(fishReserve(laterFishDays + (needsFish ? 1 : 0)));
+      // Si el pescado de hoy va en la cena, se evita pescado (p. ej. atún en lata) en la comida.
+      const comidaMain = chooseDish(comidaPool, {excludeIds: excludeIds1, softExcludeIds: comidaSoft, excludeCategories: fishMeal[i] === 'cena' ? ['azul'] : [], mealType:'comida'});
+      usedThisWeek[comidaMain.id] = (usedThisWeek[comidaMain.id]||0)+1;
+      const comidaSlot = buildSlot(comidaMain, pool, null);
+      const comidaCats = slotCategories(comidaSlot);
+
+      let cenaPool = mainEligiblePool(pool, 'cena');
+      if (tiktokUsedThisWeek) cenaPool = cenaPool.filter(d=>d.special!=='tiktok');
+      const cenaForcedFish = needsFish && !isRealFish(comidaMain);
+      if (cenaForcedFish){
+        const fishOnly = cenaPool.filter(isRealFish);
+        if (fishOnly.length) cenaPool = fishOnly;
+      }
+      const excludeIds2 = Array.from(new Set([...usedThisWeekExclusions(usedThisWeek), comidaMain.id]));
+      // Sin dos carbohidratos, dos carnes ni dos pescados el mismo día (salvo pescado obligatorio en la cena).
+      const cenaExcludeCats = comidaCats.filter(c => c === 'amarillo' || c === 'rojo' || (c === 'azul' && !cenaForcedFish));
+      const cenaMain = chooseDish(cenaPool, {
+        excludeIds: excludeIds2,
+        softExcludeIds: cenaForcedFish ? prevMainIds : prevMainIds.concat(fishReserve(laterFishDays)),
+        excludeCategories: cenaExcludeCats,
+        mealType:'cena'
+      });
+      usedThisWeek[cenaMain.id] = (usedThisWeek[cenaMain.id]||0)+1;
+      if (cenaMain.special === 'tiktok') tiktokUsedThisWeek = true;
+      const cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish, cenaExcludeCats);
+
+      days.push({day: DAY_NAMES[i], comida: comidaSlot, cena: cenaSlot});
+    }
+
+    ensureFishQuota(days, pool, fishTarget);
+
+    previousMenu = currentMenu;
+    currentMenu = {days, season: prefs.season};
+    dayAttempts = [0,0,0,0,0];
+    storageSet('currentMenu', currentMenu);
+    storageSet('previousMenu', previousMenu);
+    renderWeek();
+  }
+
+  function regenerateDay(i){
+    if (!currentMenu) return;
+    dayAttempts[i]++;
+    const pool = seasonPool();
+    const free = dayAttempts[i] >= 3;
+    const prevMainIds = previousMenu ? previousMenu.days.flatMap(d=>[d.comida.main, d.cena.main]) : [];
+
+    const otherDaysUsed = {};
+    currentMenu.days.forEach((d,idx)=>{
+      if (idx!==i){
+        otherDaysUsed[d.comida.main] = (otherDaysUsed[d.comida.main]||0)+1;
+        otherDaysUsed[d.cena.main] = (otherDaysUsed[d.cena.main]||0)+1;
+      }
+    });
+    const tiktokUsedElsewhere = currentMenu.days.some((d,idx)=> idx!==i && dishHasSpecial(d.cena.main,'tiktok'));
+
+    const comidaBasePool = mainEligiblePool(pool, 'comida');
+    let cenaBasePool = mainEligiblePool(pool, 'cena');
+    if (tiktokUsedElsewhere) cenaBasePool = cenaBasePool.filter(d=>d.special!=='tiktok');
+
+    let comidaSlot, cenaSlot;
+    if (free){
+      const comidaMain = comidaBasePool[Math.floor(Math.random()*comidaBasePool.length)];
+      comidaSlot = buildSlot(comidaMain, pool, null);
+      const cenaChoices = cenaBasePool.filter(d => d.id !== comidaMain.id);
+      const cenaPickFrom = cenaChoices.length ? cenaChoices : cenaBasePool;
+      const cenaMain = cenaPickFrom[Math.floor(Math.random()*cenaPickFrom.length)];
+      cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish);
+      dayAttempts[i] = 0;
+    } else {
+      const excludeIds = usedThisWeekExclusions(otherDaysUsed);
+      const comidaMain = chooseDish(comidaBasePool, {excludeIds, softExcludeIds: prevMainIds, mealType:'comida'});
+      comidaSlot = buildSlot(comidaMain, pool, null);
+      const comidaCats = slotCategories(comidaSlot);
+      const excludeIds2 = usedThisWeekExclusions({...otherDaysUsed, [comidaMain.id]: 1});
+      const cenaExcludeCats = comidaCats.filter(c => c === 'amarillo' || c === 'rojo' || c === 'azul');
+      const cenaMain = chooseDish(cenaBasePool, {
+        excludeIds: excludeIds2,
+        softExcludeIds: prevMainIds,
+        excludeCategories: cenaExcludeCats,
+        mealType:'cena'
+      });
+      cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish, cenaExcludeCats);
+    }
+
+    currentMenu.days[i].comida = comidaSlot;
+    currentMenu.days[i].cena = cenaSlot;
+    storageSet('currentMenu', currentMenu);
+    renderWeek();
+  }
+
+  // ---- rendering ----
+  function dotsHtml(categories){
+    return categories.map(c => `<span class="cat-emoji" title="${CATEGORY_META[c].label}">${CATEGORY_META[c].emoji}</span>`).join('');
+  }
+
+  function renderSeasonToggle(){
+    document.querySelectorAll('#seasonToggle .opt').forEach(el=>{
+      const s = el.getAttribute('data-season');
+      el.classList.toggle('active', s === prefs.season);
+      el.classList.toggle('frio', s === 'frio');
+    });
+  }
+
+  function renderDayJump(){
+    const nav = document.getElementById('dayJump');
+    nav.innerHTML = DAY_NAMES.map((d,i)=>`<a href="#day-${i}" data-day="${i}">${d}</a>`).join('');
+  }
+  // Scroll sin tocar la URL: con el enlace #day-N cada salto añadía una entrada al historial
+  // y el botón «atrás» de Android tenía que pulsarse varias veces para salir de la app.
+  document.getElementById('dayJump').addEventListener('click', (e)=>{
+    const a = e.target.closest('a[data-day]');
+    if (!a) return;
+    e.preventDefault();
+    const card = document.getElementById('day-' + a.getAttribute('data-day'));
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  function attemptDotsHtml(i){
+    let html = '';
+    for (let k=0;k<3;k++){
+      html += `<span class="${k < dayAttempts[i] ? 'filled':''}"></span>`;
+    }
+    return html;
+  }
+
+  function renderWeek(){
+    const week = document.getElementById('week');
+    if (!currentMenu){
+      week.innerHTML = '<div class="empty-state">Todavía no hay menú. Pulsa «Generar menú semanal» para crear el primero.</div>';
+      return;
+    }
+    week.innerHTML = currentMenu.days.map((day, i)=>{
+      const comidaInfo = slotDisplay(day.comida);
+      const cenaInfo = slotDisplay(day.cena);
+      return `
+        <section class="day-card" id="day-${i}">
+          <div class="day-card-head">
+            <h2 class="day-name">${day.day}</h2>
+            <div class="change-wrap">
+              <button class="change-btn" data-day="${i}">🔄 Cambiar día</button>
+              <div class="attempt-dots">${attemptDotsHtml(i)}</div>
+            </div>
+          </div>
+          <div class="meal-row" data-day="${i}" data-meal="comida">
+            <span class="meal-label">Comida</span>
+            <div class="meal-body">
+              <div class="dish-name">${comidaInfo.name}</div>
+              <div class="dish-dots">${dotsHtml(comidaInfo.cats)}</div>
+            </div>
+          </div>
+          <div class="meal-row" data-day="${i}" data-meal="cena">
+            <span class="meal-label">Cena</span>
+            <div class="meal-body">
+              <div class="dish-name">${cenaInfo.name}</div>
+              <div class="dish-dots">${dotsHtml(cenaInfo.cats)}</div>
+            </div>
+          </div>
+        </section>
+      `;
+    }).join('');
+
+    week.querySelectorAll('.change-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const i = parseInt(btn.getAttribute('data-day'), 10);
+        regenerateDay(i);
+      });
+    });
+
+    week.querySelectorAll('.meal-row').forEach(row=>{
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', ()=>{
+        const dayIdx = parseInt(row.getAttribute('data-day'), 10);
+        const meal = row.getAttribute('data-meal');
+        const slot = currentMenu.days[dayIdx][meal];
+        if (slot && slot.main) openIngredientsModal(slot);
+      });
+    });
+  }
+
+  // Agrupa por nombre de ingrediente y SUMA las cantidades de todos los platos de la semana
+  // (antes solo se mostraba la cantidad del primer plato en que aparecía).
+  function buildShoppingList(){
+    if (!currentMenu) return [];
+    const map = {};
+    const addUses = (ingredients, dayName, meal, dishName) => {
+      ingredients.forEach(ing => {
+        const key = ing.name.trim().toLowerCase();
+        if (!key) return;
+        if (!map[key]) map[key] = { name: ing.name.trim(), totals: {}, uses: [] };
+        const n = scaledAmount(ing, prefs.servings);
+        if (n !== null) map[key].totals[ing.unit] = (map[key].totals[ing.unit] || 0) + n;
+        map[key].uses.push({ day: dayName, meal, dish: dishName, qty: n === null ? null : amountText(n, ing.unit, ing.name) });
+      });
+    };
+    currentMenu.days.forEach(day => {
+      ['comida','cena'].forEach(meal => {
+        const slot = day[meal];
+        if (!slot || !slot.main) return;
+        const main = dishById(slot.main);
+        const garnish = slot.garnish ? dishById(slot.garnish) : null;
+        if (main) addUses(main.ingredients, day.day, meal, main.name);
+        if (garnish) addUses(garnish.ingredients, day.day, meal, garnish.name);
+      });
+    });
+    return Object.values(map).map(item => {
+      const units = Object.keys(item.totals);
+      item.label = units.length
+        ? units.map(u => formatIngredient({ name: item.name, amount: item.totals[u], unit: u, baseServings: 1 }, 1)).join(' + ')
+        : item.name;
+      return item;
+    }).sort((a,b)=> a.name.localeCompare(b.name, 'es'));
+  }
+
+  function renderShoppingList(){
+    const el = document.getElementById('shoppingListContent');
+    if (!currentMenu){
+      el.innerHTML = '<div class="empty-state">Genera un menú semanal primero.</div>';
+      return;
+    }
+    const list = buildShoppingList();
+    const mealLabel = { comida: 'comida', cena: 'cena' };
+    el.innerHTML = list.map(item => `
+      <div class="dish-list-item" style="cursor:default;">
+        <div class="info">
+          <div class="name">${escapeHtml(item.label)}</div>
+          <div class="ings">${item.uses.map(u => {
+            const showQty = item.uses.length > 1 && Object.keys(item.totals).length > 0;
+            const qty = showQty ? (u.qty ? `: ${escapeHtml(u.qty)}` : ' (sin cantidad)') : '';
+            return `${escapeHtml(u.day)} (${mealLabel[u.meal]}) — ${escapeHtml(u.dish)}${qty}`;
+          }).join('<br>')}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function ingredientGroupHtml(title, dish){
+    const chips = dish.ingredients.length
+      ? dish.ingredients.map(i=>`<span class="ing-chip">${escapeHtml(formatIngredient(i, prefs.servings))}</span>`).join('')
+      : (dish.note ? `<span class="hint">${escapeHtml(dish.note)}</span>` : '<span class="hint">Sin ingredientes registrados.</span>');
+    return `<div class="hint" style="font-weight:800;color:var(--ink);margin:10px 0 4px;">${title} — ${escapeHtml(dish.name)}</div><div class="ingredient-chips">${chips}</div>`;
+  }
+
+  function instructionsHtml(dish){
+    if (!dish.instructions) return '';
+    return `<div class="hint" style="font-weight:800;color:var(--ink);margin:14px 0 4px;">Preparación</div><div style="white-space:pre-line;font-size:0.88rem;line-height:1.45;">${escapeHtml(dish.instructions)}</div>`;
+  }
+
+  function openIngredientsModal(slot){
+    const main = dishById(slot.main);
+    if (!main) return;
+    const garnish = slot.garnish ? dishById(slot.garnish) : null;
+    document.getElementById('ingredientsDishName').textContent = garnish ? `${main.name} con ${garnish.name}` : main.name;
+    document.getElementById('ingredientsDishDots').innerHTML = dotsHtml(slotCategories(slot));
+    const list = document.getElementById('ingredientsList');
+    if (garnish){
+      list.innerHTML = ingredientGroupHtml('Principal', main) + ingredientGroupHtml('Guarnición', garnish) + instructionsHtml(main);
+    } else {
+      const chipsHtml = main.ingredients.length
+        ? `<div class="ingredient-chips">${main.ingredients.map(i=>`<span class="ing-chip">${escapeHtml(formatIngredient(i, prefs.servings))}</span>`).join('')}</div>`
+        : (main.note ? `<span class="hint">${escapeHtml(main.note)}</span>` : '<span class="hint">Sin ingredientes registrados todavía.</span>');
+      list.innerHTML = chipsHtml + instructionsHtml(main);
+    }
+    document.getElementById('ingredientsOverlay').classList.add('show');
+  }
+
+  function renderFishStepper(){
+    document.querySelectorAll('#fishStepper button').forEach(b=>{
+      b.classList.toggle('selected', parseInt(b.getAttribute('data-val'),10) === prefs.fishFrequency);
+    });
+  }
+
+  function renderServingsStepper(){
+    document.querySelectorAll('#servingsStepper button').forEach(b=>{
+      b.classList.toggle('selected', parseInt(b.getAttribute('data-val'),10) === prefs.servings);
+    });
+  }
+
+  function renderIngredientChips(){
+    const el = document.getElementById('ingredientChips');
+    el.innerHTML = ingredientDraft.map((ing, idx)=>
+      `<span class="ing-chip">${escapeHtml(formatIngredient(ing, ing.baseServings || 2))}<button data-idx="${idx}">✕</button></span>`
+    ).join('');
+    el.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const idx = parseInt(b.getAttribute('data-idx'),10);
+        ingredientDraft.splice(idx,1);
+        renderIngredientChips();
+      });
+    });
+  }
+
+  function dishTypeLabel(d){
+    let label = (d.types||['standalone']).map(t => TYPE_LABELS[t]).join(' + ');
+    if (d.mealRestriction === 'cena') label += ' · solo cena';
+    if (d.mealRestriction === 'comida') label += ' · solo comida';
+    if (d.special === 'tiktok') label += ' · máx. 1/semana';
+    return label;
+  }
+
+  function renderDishList(){
+    const el = document.getElementById('dishListContent');
+    const seasonLabel = {ambas:'Todo el año', calor:'Solo calor', frio:'Solo frío'};
+    el.innerHTML = dishes.map(d=>`
+      <div class="dish-list-item" data-id="${d.id}" style="cursor:pointer;">
+        <div class="info">
+          <div class="name">${escapeHtml(d.name)}</div>
+          <div class="dish-dots">${dotsHtml(d.categories)}</div>
+          <div class="ings">${escapeHtml(d.ingredients.map(i=>formatIngredient(i, prefs.servings)).join(', '))}</div>
+          <div class="season-tag">${seasonLabel[d.season] || 'Todo el año'} · ${dishTypeLabel(d)}</div>
+        </div>
+        <span style="color:var(--ink-soft);font-size:1.15rem;">✎</span>
+      </div>
+    `).join('');
+    el.querySelectorAll('.dish-list-item').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const dish = dishById(row.getAttribute('data-id'));
+        if (dish){
+          document.getElementById('dishListOverlay').classList.remove('show');
+          returnToDishList = true;
+          openDishForm(dish);
+        }
+      });
+    });
+  }
+
+  // ---- events ----
+  document.getElementById('generateBtn').addEventListener('click', generateWeek);
+
+  document.getElementById('seasonToggle').addEventListener('click', (e)=>{
+    const opt = e.target.closest('.opt');
+    if (!opt) return;
+    prefs.season = opt.getAttribute('data-season');
+    storageSet('preferences', prefs);
+    renderSeasonToggle();
+  });
+
+  document.getElementById('prefsBtn').addEventListener('click', ()=>{
+    renderFishStepper();
+    renderServingsStepper();
+    document.getElementById('prefsOverlay').classList.add('show');
+  });
+  document.getElementById('closePrefs').addEventListener('click', ()=>{
+    document.getElementById('prefsOverlay').classList.remove('show');
+  });
+  document.getElementById('fishStepper').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    prefs.fishFrequency = parseInt(btn.getAttribute('data-val'),10);
+    storageSet('preferences', prefs);
+    renderFishStepper();
+  });
+  document.getElementById('servingsStepper').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    prefs.servings = parseInt(btn.getAttribute('data-val'),10);
+    storageSet('preferences', prefs);
+    renderServingsStepper();
+  });
+
+  function openDishForm(dish){
+    editingDishId = dish ? dish.id : null;
+    ingredientDraft = dish ? dish.ingredients.slice() : [];
+    selectedCats = dish ? dish.categories.slice() : [];
+    selectedTypes = dish ? (dish.types ? dish.types.slice() : ['standalone']) : ['standalone'];
+    if (dish){
+      selectedSeasons = dish.season === 'ambas' ? ['calor','frio'] : [dish.season];
+      selectedMeals = dish.mealRestriction ? [dish.mealRestriction] : ['comida','cena'];
+    } else {
+      selectedSeasons = ['calor','frio'];
+      selectedMeals = ['comida','cena'];
+    }
+    document.getElementById('dishFormTitle').textContent = dish ? 'Editar plato' : 'Añadir plato';
+    document.getElementById('newDishName').value = dish ? dish.name : '';
+    document.getElementById('instructionsInput').value = dish && dish.instructions ? dish.instructions : '';
+    document.querySelectorAll('#catPicker .cat-toggle').forEach(el=>{
+      el.classList.toggle('selected', selectedCats.includes(el.getAttribute('data-cat')));
+    });
+    document.querySelectorAll('#typePicker .cat-toggle').forEach(el=>{
+      el.classList.toggle('selected', selectedTypes.includes(el.getAttribute('data-t')));
+    });
+    document.querySelectorAll('#seasonPicker .cat-toggle').forEach(el=>{
+      el.classList.toggle('selected', selectedSeasons.includes(el.getAttribute('data-s')));
+    });
+    document.querySelectorAll('#mealPicker .cat-toggle').forEach(el=>{
+      el.classList.toggle('selected', selectedMeals.includes(el.getAttribute('data-m')));
+    });
+    renderIngredientChips();
+    document.getElementById('saveDishBtn').textContent = dish ? 'Guardar cambios' : 'Guardar plato';
+    document.getElementById('deleteDishBtn').style.display = dish ? 'block' : 'none';
+    document.getElementById('addDishOverlay').classList.add('show');
+  }
+
+  function closeDishFormReturning(){
+    document.getElementById('addDishOverlay').classList.remove('show');
+    if (returnToDishList){
+      returnToDishList = false;
+      renderDishList();
+      document.getElementById('dishListOverlay').classList.add('show');
+    }
+  }
+
+  document.getElementById('addDishBtn').addEventListener('click', ()=>{
+    returnToDishList = false;
+    openDishForm(null);
+  });
+  document.getElementById('cancelAddDish').addEventListener('click', closeDishFormReturning);
+  document.getElementById('catPicker').addEventListener('click', (e)=>{
+    const el = e.target.closest('.cat-toggle');
+    if (!el) return;
+    const cat = el.getAttribute('data-cat');
+    if (selectedCats.includes(cat)){
+      selectedCats = selectedCats.filter(c=>c!==cat);
+      el.classList.remove('selected');
+    } else {
+      selectedCats.push(cat);
+      el.classList.add('selected');
+    }
+  });
+  document.getElementById('seasonPicker').addEventListener('click', (e)=>{
+    const el = e.target.closest('.cat-toggle');
+    if (!el) return;
+    const s = el.getAttribute('data-s');
+    if (selectedSeasons.includes(s)){
+      if (selectedSeasons.length > 1){
+        selectedSeasons = selectedSeasons.filter(x=>x!==s);
+        el.classList.remove('selected');
+      }
+    } else {
+      selectedSeasons.push(s);
+      el.classList.add('selected');
+    }
+  });
+  document.getElementById('typePicker').addEventListener('click', (e)=>{
+    const el = e.target.closest('.cat-toggle');
+    if (!el) return;
+    const t = el.getAttribute('data-t');
+    if (selectedTypes.includes(t)){
+      if (selectedTypes.length > 1){
+        selectedTypes = selectedTypes.filter(x=>x!==t);
+        el.classList.remove('selected');
+      }
+    } else {
+      selectedTypes.push(t);
+      el.classList.add('selected');
+    }
+  });
+  document.getElementById('mealPicker').addEventListener('click', (e)=>{
+    const el = e.target.closest('.cat-toggle');
+    if (!el) return;
+    const m = el.getAttribute('data-m');
+    if (selectedMeals.includes(m)){
+      if (selectedMeals.length > 1){
+        selectedMeals = selectedMeals.filter(x=>x!==m);
+        el.classList.remove('selected');
+      }
+    } else {
+      selectedMeals.push(m);
+      el.classList.add('selected');
+    }
+  });
+  document.getElementById('addIngredientBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('ingredientInput');
+    const val = input.value.trim();
+    if (val && !ingredientDraft.some(i => i.name.toLowerCase() === val.toLowerCase())){
+      ingredientDraft.push({ name: val });
+      input.value = '';
+      renderIngredientChips();
+    } else if (val){
+      input.value = '';
+    }
+  });
+  document.getElementById('ingredientInput').addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      document.getElementById('addIngredientBtn').click();
+    }
+  });
+  document.getElementById('saveDishBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('newDishName').value.trim();
+    if (!name){ alert('Ponle un nombre al plato.'); return; }
+    if (!selectedCats.length){ alert('Elige al menos una categoría.'); return; }
+    const instructions = document.getElementById('instructionsInput').value.trim();
+    const seasonValue = selectedSeasons.length >= 2 ? 'ambas' : selectedSeasons[0];
+    const mealRestrictionValue = selectedMeals.length >= 2 ? null : selectedMeals[0];
+    if (editingDishId){
+      const dish = dishById(editingDishId);
+      if (dish){
+        dish.name = name;
+        dish.categories = selectedCats.slice();
+        dish.ingredients = ingredientDraft.slice();
+        dish.season = seasonValue;
+        dish.types = selectedTypes.slice();
+        if (mealRestrictionValue) dish.mealRestriction = mealRestrictionValue; else delete dish.mealRestriction;
+        if (instructions) dish.instructions = instructions; else delete dish.instructions;
+      }
+    } else {
+      const id = name.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') + '-' + Date.now();
+      const newDish = {
+        id, name,
+        categories: selectedCats.slice(),
+        ingredients: ingredientDraft.slice(),
+        season: seasonValue,
+        types: selectedTypes.slice()
+      };
+      if (mealRestrictionValue) newDish.mealRestriction = mealRestrictionValue;
+      if (instructions) newDish.instructions = instructions;
+      dishes.push(newDish);
+    }
+    storageSet('dishes', dishes);
+    closeDishFormReturning();
+    renderWeek();
+  });
+  document.getElementById('deleteDishBtn').addEventListener('click', ()=>{
+    if (!editingDishId) return;
+    if (confirm('¿Eliminar este plato de la base de datos?')){
+      dishes = dishes.filter(d=>d.id !== editingDishId);
+      storageSet('dishes', dishes);
+      closeDishFormReturning();
+      renderWeek();
+    }
+  });
+
+  document.getElementById('openDishesFromPrefs').addEventListener('click', ()=>{
+    renderDishList();
+    document.getElementById('dishListOverlay').classList.add('show');
+  });
+  document.getElementById('closeDishList').addEventListener('click', ()=>{
+    document.getElementById('dishListOverlay').classList.remove('show');
+  });
+  document.getElementById('closeIngredients').addEventListener('click', ()=>{
+    document.getElementById('ingredientsOverlay').classList.remove('show');
+  });
+
+  // ---- init ----
+  document.getElementById('topClosePrefs').addEventListener('click', ()=> document.getElementById('closePrefs').click());
+  document.getElementById('topCloseAddDish').addEventListener('click', ()=> document.getElementById('cancelAddDish').click());
+  document.getElementById('topCloseDishList').addEventListener('click', ()=> document.getElementById('closeDishList').click());
+  document.getElementById('topCloseIngredients').addEventListener('click', ()=> document.getElementById('closeIngredients').click());
+  document.getElementById('shoppingListBtn').addEventListener('click', ()=>{
+    renderShoppingList();
+    document.getElementById('shoppingListOverlay').classList.add('show');
+  });
+  document.getElementById('closeShoppingList').addEventListener('click', ()=>{
+    document.getElementById('shoppingListOverlay').classList.remove('show');
+  });
+  document.getElementById('topCloseShoppingList').addEventListener('click', ()=> document.getElementById('closeShoppingList').click());
+
+  // Back-gesture / back-button support: closing any overlay this way,
+  // instead of exiting the app, by keeping one history entry per "modal open" state.
+  let modalHistoryPushed = false;
+  function anyOverlayOpen(){
+    return !!document.querySelector('.overlay.show');
+  }
+  function syncModalHistory(){
+    const isOpen = anyOverlayOpen();
+    if (isOpen && !modalHistoryPushed){
+      modalHistoryPushed = true;
+      history.pushState({menuOverlay:true}, '');
+    } else if (!isOpen && modalHistoryPushed){
+      modalHistoryPushed = false;
+      history.back();
+    }
+  }
+  window.addEventListener('popstate', ()=>{
+    document.querySelectorAll('.overlay.show').forEach(el=>el.classList.remove('show'));
+    modalHistoryPushed = false;
+  });
+  document.querySelectorAll('.overlay').forEach(el=>{
+    new MutationObserver(syncModalHistory).observe(el, {attributes:true, attributeFilter:['class']});
+  });
+
+  async function init(){
+    dishes = await storageGet('dishes', null);
+    const storedVersion = await storageGet('dishesVersion', 0);
+    if (!dishes){
+      dishes = DEFAULT_DISHES.map(d=>({...d}));
+      await storageSet('dishes', dishes);
+      await storageSet('dishesVersion', DISHES_VERSION);
+    } else if (storedVersion < DISHES_VERSION){
+      const defaultIds = new Set(DEFAULT_DISHES.map(d=>d.id));
+      const customDishes = dishes.filter(d => !defaultIds.has(d.id));
+      dishes = DEFAULT_DISHES.map(d=>({...d})).concat(customDishes);
+      await storageSet('dishes', dishes);
+      await storageSet('dishesVersion', DISHES_VERSION);
+    }
+    dishes.forEach(d=>{
+      if (!d.types){
+        const types = d.type ? [d.type] : ['standalone'];
+        if (d.canBeGarnish && !types.includes('guarnicion')) types.push('guarnicion');
+        d.types = types;
+      }
+      delete d.type;
+      delete d.canBeGarnish;
+    });
+    const loadedPrefs = await storageGet('preferences', null);
+    prefs = { ...DEFAULT_PREFS, ...(loadedPrefs || {}) };
+    if (!loadedPrefs) await storageSet('preferences', prefs);
+    currentMenu = normalizeMenu(await storageGet('currentMenu', null));
+    previousMenu = normalizeMenu(await storageGet('previousMenu', null));
+
+    renderSeasonToggle();
+    renderDayJump();
+    renderWeek();
+  }
+
+  init();
+
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+})();
+</script>
+</body>
+</html>
