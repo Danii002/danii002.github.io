@@ -187,6 +187,7 @@
     display:flex;align-items:center;justify-content:center;
   }
   .sheet-close:active{background:var(--line);}
+  .sheet-close.active{border-color:var(--accent);background:#EFEADD;}
   .field{margin-bottom:14px;}
   .field label{display:block;font-size:0.8rem;font-weight:800;color:var(--ink-soft);margin-bottom:6px;}
   .field input[type=text]{
@@ -248,6 +249,18 @@
   .bal-check .ic{flex:none;font-size:1rem;line-height:1.2;}
   .bal-check .t{font-weight:800;}
   .bal-check .d{color:var(--ink-soft);font-size:0.78rem;margin-top:1px;}
+  .dish-list-header{flex-wrap:wrap;}
+  .header-btns{display:flex;gap:8px;flex:none;}
+  .dish-search{flex:0 0 100%;min-width:0;max-width:100%;margin-top:10px;}
+  .dish-list-header h2{min-width:0;}
+  #dishListOverlay .sheet{overflow-x:hidden;}
+  .dish-search[hidden]{display:none;}
+  .dish-search input{width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);font-size:0.95rem;font-family:'Nunito',sans-serif;background:#fff;}
+  .filter-chips{display:flex;gap:6px;overflow-x:auto;min-width:0;max-width:100%;padding:8px 0 2px;scrollbar-width:none;}
+  .fchip{flex:none;padding:5px 10px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-size:0.78rem;font-weight:700;color:var(--ink-soft);cursor:pointer;user-select:none;}
+  .fchip.on{border-color:var(--accent);background:var(--accent);color:#fff;}
+  .search-meta{display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;color:var(--ink-soft);margin-top:6px;}
+  .link-btn{background:none;color:var(--accent);font-weight:800;font-size:0.78rem;padding:0;}
   .del-btn{background:none;color:var(--rojo);font-weight:800;font-size:0.85rem;padding:4px 6px;}
 </style>
 </head>
@@ -410,7 +423,31 @@
 <!-- Dish list -->
 <div class="overlay" id="dishListOverlay">
   <div class="sheet">
-    <div class="sheet-header"><h2>Base de datos de platos</h2><button class="sheet-close" id="topCloseDishList">✕</button></div>
+    <div class="sheet-header dish-list-header">
+      <h2>Base de datos de platos</h2>
+      <div class="header-btns">
+        <button class="sheet-close" id="dishSearchToggle" aria-label="Buscar platos">🔍</button>
+        <button class="sheet-close" id="topCloseDishList">✕</button>
+      </div>
+      <div class="dish-search" id="dishSearchPanel" hidden>
+        <input type="search" id="dishSearchInput" placeholder="Buscar por nombre o ingrediente…" autocomplete="off">
+        <div class="filter-chips" id="dishFilterChips">
+          <span class="fchip" data-f="cat:rojo">🥩 Carne</span>
+          <span class="fchip" data-f="cat:azul">🐟 Pescado</span>
+          <span class="fchip" data-f="cat:marron">🫘 Legumbre</span>
+          <span class="fchip" data-f="cat:verde">🥦 Verdura</span>
+          <span class="fchip" data-f="cat:morado">🥚 Huevo</span>
+          <span class="fchip" data-f="cat:amarillo">🍝 Carbohidrato</span>
+          <span class="fchip" data-f="meal:comida">Para comer</span>
+          <span class="fchip" data-f="meal:cena">Para cenar</span>
+          <span class="fchip" data-f="season:frio">❄️ Frío</span>
+          <span class="fchip" data-f="season:calor">☀️ Calor</span>
+          <span class="fchip" data-f="type:guarnicion">Guarniciones</span>
+          <span class="fchip" data-f="tiktok">TikTok / caprichos</span>
+        </div>
+        <div class="search-meta"><span id="dishSearchCount"></span><button class="link-btn" id="dishSearchClear">Limpiar filtros</button></div>
+      </div>
+    </div>
     <div id="dishListContent"></div>
     <div class="modal-actions">
       <button class="btn-primary" id="closeDishList">Cerrar</button>
@@ -1381,10 +1418,46 @@
     return label;
   }
 
+  // ---- Búsqueda y filtros en la lista de platos ----
+  const dishSearch = { text: '', filters: new Set() };
+  function normText(str){
+    return String(str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  function dishMatchesSearch(d){
+    const q = normText(dishSearch.text).trim();
+    if (q){
+      const words = q.split(/\s+/);
+      const hay = normText(d.name + ' ' + d.ingredients.map(i => i.name).join(' '));
+      if (!words.every(w => hay.includes(w))) return false;
+    }
+    const types = d.types || ['standalone'];
+    for (const f of dishSearch.filters){
+      const [kind, val] = f.split(':');
+      if (kind === 'cat' && !d.categories.includes(val)) return false;
+      if (kind === 'meal' && (types.every(t => t === 'guarnicion') || (d.mealRestriction && d.mealRestriction !== val))) return false;
+      if (kind === 'season' && !(d.season === 'ambas' || d.season === val)) return false;
+      if (kind === 'type' && !types.includes(val)) return false;
+      if (kind === 'tiktok' && d.special !== 'tiktok') return false;
+    }
+    return true;
+  }
+  function renderDishSearchUi(){
+    document.querySelectorAll('#dishFilterChips .fchip').forEach(ch => ch.classList.toggle('on', dishSearch.filters.has(ch.getAttribute('data-f'))));
+    const active = dishSearch.text.trim() || dishSearch.filters.size;
+    document.getElementById('dishSearchToggle').classList.toggle('active', !!active);
+  }
+
   function renderDishList(){
     const el = document.getElementById('dishListContent');
     const seasonLabel = {ambas:'Todo el año', calor:'Solo calor', frio:'Solo frío'};
-    el.innerHTML = dishes.map(d=>`
+    // Primero los platos que tienen lo buscado en el nombre; después los que solo lo llevan en los ingredientes.
+    const q = normText(dishSearch.text).trim();
+    const inName = d => q && q.split(/\s+/).every(w => normText(d.name).includes(w));
+    const list = dishes.filter(dishMatchesSearch).sort((a, b) => (inName(b) ? 1 : 0) - (inName(a) ? 1 : 0));
+    document.getElementById('dishSearchCount').textContent = `${list.length} de ${dishes.length} platos`;
+    renderDishSearchUi();
+    el.innerHTML = list.length ? '' : '<div class="empty-state" style="margin-top:10px;">No hay platos que coincidan con la búsqueda.</div>';
+    el.innerHTML += list.map(d=>`
       <div class="dish-list-item" data-id="${d.id}" style="cursor:pointer;">
         <div class="info">
           <div class="name">${escapeHtml(d.name)}</div>
@@ -1614,7 +1687,39 @@
     }
   });
 
+  document.getElementById('dishSearchToggle').addEventListener('click', ()=>{
+    const panel = document.getElementById('dishSearchPanel');
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) document.getElementById('dishSearchInput').focus();
+  });
+  document.getElementById('dishSearchInput').addEventListener('input', (e)=>{
+    dishSearch.text = e.target.value;
+    renderDishList();
+  });
+  document.getElementById('dishFilterChips').addEventListener('click', (e)=>{
+    const ch = e.target.closest('.fchip');
+    if (!ch) return;
+    const f = ch.getAttribute('data-f');
+    if (dishSearch.filters.has(f)) dishSearch.filters.delete(f);
+    else {
+      // "Para comer" y "Para cenar" (o "Frío" y "Calor") son excluyentes entre sí.
+      const kind = f.split(':')[0];
+      if (kind === 'meal' || kind === 'season') [...dishSearch.filters].forEach(x => { if (x.split(':')[0] === kind) dishSearch.filters.delete(x); });
+      dishSearch.filters.add(f);
+    }
+    renderDishList();
+  });
+  document.getElementById('dishSearchClear').addEventListener('click', ()=>{
+    dishSearch.text = ''; dishSearch.filters.clear();
+    document.getElementById('dishSearchInput').value = '';
+    renderDishList();
+  });
+
   document.getElementById('openDishesFromPrefs').addEventListener('click', ()=>{
+    // Al abrir la lista desde Preferencias se empieza sin búsqueda.
+    dishSearch.text = ''; dishSearch.filters.clear();
+    document.getElementById('dishSearchInput').value = '';
+    document.getElementById('dishSearchPanel').hidden = true;
     renderDishList();
     document.getElementById('dishListOverlay').classList.add('show');
   });
