@@ -350,6 +350,7 @@
       <input type="file" id="importFile" accept=".json,.txt,application/json,text/plain" style="display:none">
       <p class="hint">«Guardar copia» crea un archivo con el menú, los platos y las preferencias; puedes enviártelo por WhatsApp o guardarlo en Drive. Si cambias de móvil o se borran los datos, instala la app y pulsa «Recuperar copia».</p>
     </div>
+    <p class="hint" id="appVersion" style="text-align:center;margin-top:4px;"></p>
     <div class="modal-actions">
       <button class="btn-primary" id="closePrefs">Hecho</button>
     </div>
@@ -1492,6 +1493,7 @@
   });
 
   document.getElementById('prefsBtn').addEventListener('click', ()=>{
+    document.getElementById('appVersion').textContent = `Versión de la app: platos v${DISHES_VERSION} · ${dishes.length} platos`;
     renderFishStepper();
     renderLegumeStepper();
     renderServingsStepper();

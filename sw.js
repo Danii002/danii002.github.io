@@ -1,5 +1,5 @@
 // Sube este número cada vez que cambies la lista ASSETS o sustituyas iconos/fuentes.
-const CACHE_NAME = 'menu-semanal-v3';
+const CACHE_NAME = 'menu-semanal-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,8 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  // cache: 'reload' → descarga del servidor, sin usar la caché HTTP del navegador (GitHub Pages guarda 10 min).
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
@@ -40,7 +41,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
       cache.match(req, { ignoreSearch: true }).then((cached) => {
-        const network = fetch(req)
+        // cache: 'no-cache' → siempre pregunta al servidor si hay versión nueva (si no la hay, no descarga nada).
+        const network = fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' })
           .then((response) => {
             if (response && response.ok) cache.put(req, response.clone());
             return response;
