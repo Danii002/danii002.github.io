@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Menú de la semana</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#FAF6EC">
@@ -133,13 +133,18 @@
     font-family:'Kalam',cursive;
     font-size:1.25rem;margin:0;color:var(--accent);
   }
-  .change-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
-  .change-btn{
-    background:var(--paper);border:1.5px solid var(--line);
-    border-radius:12px;padding:6px 10px;font-size:0.78rem;font-weight:700;
-    color:var(--ink-soft);
+  .meal-actions{flex:none;display:flex;align-items:flex-start;gap:6px;}
+  .change-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .icon-btn{
+    width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;
+    background:var(--paper);border:1.5px solid var(--line);border-radius:11px;
+    font-size:1rem;line-height:1;color:var(--ink-soft);
   }
-  .change-btn:active{background:var(--line);}
+  .icon-btn:active{background:var(--line);}
+  .lock-btn{opacity:0.45;filter:grayscale(1);}
+  .lock-btn.locked{opacity:1;filter:none;background:#FBEFD5;border-color:var(--amarillo);}
+  .change-btn:disabled{opacity:0.3;}
+  .meal-row.is-locked .dish-name::after{content:' · fijado';font-size:0.7rem;font-weight:700;color:var(--ink-soft);}
   .attempt-dots{display:flex;gap:3px;}
   .attempt-dots span{width:5px;height:5px;border-radius:50%;background:var(--line);}
   .attempt-dots span.filled{background:var(--accent);}
@@ -218,6 +223,29 @@
     display:flex;align-items:center;gap:6px;
   }
   .ing-chip button{background:none;color:var(--ink-soft);font-weight:800;padding:0;font-size:0.85rem;}
+  .ing-chip .ing-edit{cursor:pointer;}
+  .ing-chip.editing{outline:2px solid var(--accent);}
+  .ing-qty{display:flex;gap:8px;margin-top:8px;}
+  .ing-qty input{
+    width:0;flex:1;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);
+    font-size:0.95rem;font-family:'Nunito',sans-serif;background:#fff;
+  }
+  .ing-qty select{
+    flex:1;padding:10px 8px;border-radius:12px;border:1.5px solid var(--line);
+    font-size:0.95rem;font-family:'Nunito',sans-serif;background:#fff;color:var(--ink);
+  }
+  .ing-qty button{background:var(--accent);color:#fff;border-radius:12px;padding:0 14px;font-weight:800;}
+  .form-servings{display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--ink-soft);margin-bottom:8px;flex-wrap:wrap;}
+  .form-servings .stepper{flex:1;min-width:150px;}
+  .form-servings .stepper button{padding:6px;font-size:0.9rem;}
+  .rate-row{display:flex;gap:8px;}
+  .rate-row button{
+    flex:1;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+    padding:9px;font-weight:800;font-size:0.88rem;color:var(--ink-soft);
+  }
+  .rate-row button.selected.up{border-color:var(--verde);background:#E7F0DF;color:#3D5A2A;}
+  .rate-row button.selected.down{border-color:var(--rojo);background:#F7E3DE;color:#8A3221;}
+  .rate-tag{font-size:0.8rem;margin-left:4px;}
   .modal-actions{display:flex;gap:10px;margin-top:18px;}
   .modal-actions button{flex:1;}
 
@@ -263,6 +291,11 @@
   .link-btn{background:none;color:var(--accent);font-weight:800;font-size:0.78rem;padding:0;}
   .del-btn{background:none;color:var(--rojo);font-weight:800;font-size:0.85rem;padding:4px 6px;}
 </style>
+<script id="fontInit">
+  // Aplica el tamaño de letra guardado antes de pintar la página (sin parpadeo).
+  try { var fp = JSON.parse(localStorage.getItem('menuSemanal:preferences') || '{}');
+    document.documentElement.style.fontSize = ({pequena:'14.5px', grande:'18px'})[fp.fontSize] || '16px'; } catch(e){}
+</script>
 </head>
 <body>
 <div class="app">
@@ -335,11 +368,28 @@
       </div>
       <p class="hint">Ajusta las cantidades de los ingredientes que ya tienen cantidad definida. Los que no la tienen se muestran igual.</p>
     </div>
-    <p class="hint">La temporada (frío/calor) se cambia desde el interruptor de arriba, junto al título.</p>
+    <div class="field">
+      <label>Temporada (frío/calor)</label>
+      <div class="stepper" id="seasonModeStepper">
+        <button data-val="auto">🗓️ Según el mes</button>
+        <button data-val="manual">✋ A mano</button>
+      </div>
+      <p class="hint">«Según el mes»: de mayo a septiembre, calor; de octubre a abril, frío (se comprueba cada vez que se abre la app). Si la cambias con el interruptor de arriba, pasa a «A mano».</p>
+    </div>
+    <div class="field">
+      <label>Tamaño de la letra</label>
+      <div class="stepper" id="fontSizeStepper">
+        <button data-val="pequena" style="font-size:0.85rem;">Pequeña</button>
+        <button data-val="mediana">Mediana</button>
+        <button data-val="grande" style="font-size:1.15rem;">Grande</button>
+      </div>
+    </div>
     <div class="field">
       <label>Base de datos de platos</label>
       <button class="btn-ghost" id="openDishesFromPrefs" style="width:100%;">🍽️ Platos</button>
       <p class="hint">Edita las categorías, la temporada o los ingredientes de cada plato, o añade/elimina platos.</p>
+      <button class="btn-ghost" id="restoreDishesBtn" style="width:100%;margin-top:8px;">↩️ Restaurar platos originales</button>
+      <p class="hint">Deja los platos que venían con la app como al principio (vuelven los que borraste y se deshacen tus cambios en ellos). Los platos que has añadido tú y los 👍/👎 se conservan.</p>
     </div>
     <div class="field">
       <label>Copia de seguridad</label>
@@ -385,6 +435,24 @@
         <span class="cat-toggle" data-cat="morado">🥚 Huevo</span>
       </div>
     </div>
+    <div class="field" id="meatTypeField" hidden>
+      <label>¿Qué carne lleva?</label>
+      <div class="cat-picker" id="meatTypePicker">
+        <span class="cat-toggle" data-meat="ave">Pollo o pavo</span>
+        <span class="cat-toggle" data-meat="roja">Ternera o cerdo</span>
+        <span class="cat-toggle" data-meat="procesada">Embutido, bacon, jamón…</span>
+        <span class="cat-toggle" data-meat="">Solo un poco (no cuenta)</span>
+      </div>
+      <p class="hint">Sirve para respetar el máximo de carne de la semana (y como mucho 1 de ternera, cerdo o embutido).</p>
+    </div>
+    <div class="field" id="cannedField" hidden>
+      <label>¿El pescado es de lata?</label>
+      <div class="cat-picker" id="cannedPicker">
+        <span class="cat-toggle" data-canned="0">Pescado fresco o congelado</span>
+        <span class="cat-toggle" data-canned="1">Atún u otro pescado en lata</span>
+      </div>
+      <p class="hint">El pescado en lata no cuenta para el mínimo de pescado de la semana.</p>
+    </div>
     <div class="field">
       <label>Temporada (marca las que apliquen)</label>
       <div class="cat-picker" id="seasonPicker">
@@ -403,11 +471,37 @@
     </div>
     <div class="field">
       <label>Ingredientes</label>
+      <div class="form-servings">
+        <span>Cantidades para</span>
+        <div class="stepper" id="formServingsStepper">
+          <button data-val="1">1</button>
+          <button data-val="2">2</button>
+          <button data-val="3">3</button>
+          <button data-val="4">4</button>
+        </div>
+        <span>personas</span>
+      </div>
       <div class="ingredient-input">
         <input type="text" id="ingredientInput" placeholder="Ej: patata">
+      </div>
+      <div class="ing-qty">
+        <input type="text" inputmode="decimal" id="ingredientAmount" placeholder="Cantidad">
+        <select id="ingredientUnit">
+          <option value="g">gramos</option>
+          <option value="ml">ml</option>
+          <option value="ud">unidades</option>
+        </select>
         <button id="addIngredientBtn">Añadir</button>
       </div>
+      <p class="hint">La cantidad es opcional (déjala vacía para «al gusto»). La app la ajusta sola a las personas de Preferencias. Toca un ingrediente para cambiarlo.</p>
       <div class="ingredient-chips" id="ingredientChips"></div>
+    </div>
+    <div class="field">
+      <label>¿Os gusta?</label>
+      <div class="rate-row" id="formRateRow">
+        <button class="up" data-r="1">👍 Nos gusta</button>
+        <button class="down" data-r="-1">👎 No mucho</button>
+      </div>
     </div>
     <div class="field">
       <label>Instrucciones de preparación (opcional)</label>
@@ -464,6 +558,14 @@
     <div class="field">
       <label>Ingredientes</label>
       <div id="ingredientsList"></div>
+    </div>
+    <div class="field">
+      <label id="rateLabel">¿Os gusta este plato?</label>
+      <div class="rate-row" id="rateRow">
+        <button class="up" data-r="1">👍 Nos gusta</button>
+        <button class="down" data-r="-1">👎 No mucho</button>
+      </div>
+      <p class="hint">Los que gustan saldrán un poco más a menudo y los que no, un poco menos.</p>
     </div>
     <div class="modal-actions">
       <button class="btn-primary" id="closeIngredients">Cerrar</button>
@@ -743,7 +845,9 @@
     const m = new Date().getMonth()+1;
     return (m>=5 && m<=9) ? 'calor' : 'frio';
   }
-  const DEFAULT_PREFS = { fishFrequency: 3, legumeFrequency: 3, season: defaultSeason(), servings: 2 };
+  const DEFAULT_PREFS = { fishFrequency: 3, legumeFrequency: 3, season: defaultSeason(), servings: 2, seasonAuto: true, fontSize: 'mediana' };
+  const FONT_SIZES = { pequena: '14.5px', mediana: '16px', grande: '18px' };
+  function applyFontSize(){ document.documentElement.style.fontSize = FONT_SIZES[prefs.fontSize] || FONT_SIZES.mediana; }
 
   // ---- storage helpers ----
   async function storageGet(key, fallback){
@@ -763,13 +867,14 @@
   let prefs = {...DEFAULT_PREFS};
   let currentMenu = null;
   let previousMenu = null;
-  let dayAttempts = DAY_NAMES.map(()=>0);
   let ingredientDraft = [];
   let selectedCats = [];
   let selectedSeasons = ['calor','frio'];
   let selectedTypes = ['standalone'];
   let selectedMeals = ['comida','cena'];
   let editingDishId = null;
+  let selectedMeat = 'ave';
+  let selectedCanned = false;
   let returnToDishList = false;
 
   function dishById(id){ return dishes.find(d=>d.id===id); }
@@ -785,7 +890,7 @@
   // "media cebolla" / "medio aguacate": femenino si la primera palabra acaba en -a.
   function countLabel(n, name){
     const first = String(name || '').trim().split(/\s+/)[0];
-    const half = (!first || /a$/i.test(first)) ? 'media' : 'medio';
+    const half = (!first || /as?$/i.test(first)) ? 'media' : 'medio';
     if (n === 0.5) return half;
     if (n % 1 === 0.5) return `${Math.floor(n)} y ${half}`;
     return String(n);
@@ -796,7 +901,9 @@
     if (ing.amount == null || !ing.unit) return null;
     const base = ing.baseServings || 2;
     const raw = ing.amount * ((servings || 2) / base);
-    if (ing.unit === 'ud') return Math.max(0.5, Math.round(raw * 2) / 2);
+    // Si la receta usa unidades enteras (huevos, latas, dientes de ajo…) no se parten al escalar;
+    // si ya usa medias (media cebolla), se mantienen las medias.
+    if (ing.unit === 'ud') return Number.isInteger(ing.amount) ? Math.max(1, Math.round(raw)) : Math.max(0.5, Math.round(raw * 2) / 2);
     if (raw < 10) return Math.round(raw * 2) / 2;
     return Math.round(raw / 5) * 5;
   }
@@ -805,11 +912,33 @@
     return (unit === 'g' || unit === 'ml') ? `${n}${unit}` : countLabel(n, name);
   }
 
+  // Plural sencillo para cantidades en unidades: "2 pechugas de pollo", "3 pimientos rojos".
+  const PLURAL_ADJ = new Set(['rojo','roja','verde','morado','morada','pequeño','pequeña','mediano','mediana','grande','maduro','madura','cocido','cocida','duro','dura','fresco','fresca','limpio','limpia','griego','griega','integral','entero','entera']);
+  function pluralWord(w){
+    if (/s$/i.test(w)) return w;
+    if (/[aeiou]$/i.test(w)) return w + 's';
+    if (/z$/i.test(w)) return w.slice(0, -1) + 'ces';
+    if (/[áéíóú][ns]$/i.test(w)) return w.replace(/[áéíóú](?=[ns]$)/i, c => ({á:'a',é:'e',í:'i',ó:'o',ú:'u'})[c.toLowerCase()]) + 'es';
+    if (/l$/i.test(w) && PLURAL_ADJ.has(w.toLowerCase())) return w + 'es';
+    return w + 'es';
+  }
+  function displayName(name, n){
+    // "atún en lata" se lee mejor como "lata(s) de atún"
+    const m = /^atún en lata(.*)$/i.exec(name);
+    if (m) return (n > 1 ? 'latas de atún' : 'lata de atún') + m[1];
+    if (!(n >= 2)) return name;
+    const words = name.split(' ');
+    words[0] = pluralWord(words[0]);
+    for (let k = 1; k < words.length && PLURAL_ADJ.has(words[k].toLowerCase()); k++) words[k] = pluralWord(words[k]);
+    return words.join(' ');
+  }
+
   function formatIngredient(ing, servings){
     const n = scaledAmount(ing, servings);
     if (n === null) return ing.name;
     if (ing.unit === 'g' || ing.unit === 'ml') return `${n}${ing.unit} de ${ing.name}`;
-    return `${countLabel(n, ing.name)} ${ing.name}`;
+    const name = displayName(ing.name, n);
+    return `${countLabel(n, name)} ${name}`;
   }
 
   function slotCategories(slot){
@@ -845,7 +974,9 @@
       ? options.filter(d => !d.categories.some(c => excludeCategories.includes(c)))
       : options.slice();
     if (!candidates.length) candidates = options.slice();
-    const filtered = avoidId ? candidates.filter(d=>d.id!==avoidId) : candidates;
+    // avoidId: un id o una lista (la guarnición del otro plato del día y el propio plato del otro turno).
+    const avoid = [].concat(avoidId || []);
+    const filtered = candidates.filter(d => !avoid.includes(d.id));
     const finalOpts = filtered.length ? filtered : candidates;
     return finalOpts[Math.floor(Math.random()*finalOpts.length)].id;
   }
@@ -883,6 +1014,15 @@
     return a;
   }
 
+  // ---- Valoraciones 👍 / 👎 (se guardan aparte de los platos) ----
+  let ratings = {};
+  const RATING_FACTOR = { '1': 1.5, '-1': 0.5 };
+  function ratingFactor(id){ return RATING_FACTOR[String(ratings[id] || 0)] || 1; }
+  function setRating(id, value){
+    if (ratings[id] === value) delete ratings[id]; else ratings[id] = value;
+    storageSet('ratings', ratings);
+  }
+
   function chooseDish(pool, opts){
     opts = opts || {};
     const excludeIds = opts.excludeIds || [];
@@ -900,15 +1040,16 @@
     let soft = candidates.filter(d => !softExcludeIds.includes(d.id));
     let finalPool = soft.length ? soft : candidates;
 
-    if (mealType === 'cena'){
-      const weighted = [];
-      finalPool.forEach(d=>{
-        const w = (d.categories.includes('azul') || d.categories.includes('verde')) ? 2 : 1;
-        for (let i=0;i<w;i++) weighted.push(d);
-      });
-      return weighted[Math.floor(Math.random()*weighted.length)];
-    }
-    return finalPool[Math.floor(Math.random()*finalPool.length)];
+    // Peso de cada plato: en la cena, pescado y verdura cuentan el doble; los platos con 👍 un poco más
+    // (×1,5) y los de 👎 un poco menos (×0,5).
+    const weights = finalPool.map(d => {
+      let w = (mealType === 'cena' && (d.categories.includes('azul') || d.categories.includes('verde'))) ? 2 : 1;
+      return w * ratingFactor(d.id);
+    });
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let k = 0; k < finalPool.length; k++){ r -= weights[k]; if (r < 0) return finalPool[k]; }
+    return finalPool[finalPool.length - 1];
   }
 
   // Excluye los platos ya usados en la semana (salvo los de solo verdura) y, además,
@@ -992,9 +1133,9 @@
   // Si al final el día no tiene verdura pero la comida lleva guarnición, se cambia por una de verdura
   // (sin repetir carbohidrato con la cena).
   function fixDayVeg(comidaSlot, cenaSlot, pool){
-    if (slotHasVeg(comidaSlot) || slotHasVeg(cenaSlot) || !comidaSlot.garnish) return;
+    if (slotHasVeg(comidaSlot) || slotHasVeg(cenaSlot) || !comidaSlot.garnish || comidaSlot.locked) return;
     const cenaCats = slotCategories(cenaSlot);
-    const g = pickGarnish(pool, cenaSlot.garnish, cenaCats.includes('amarillo') ? ['amarillo'] : [], true);
+    const g = pickGarnish(pool, [cenaSlot.garnish, cenaSlot.main], cenaCats.includes('amarillo') ? ['amarillo'] : [], true);
     if (g) comidaSlot.garnish = g;
   }
 
@@ -1010,6 +1151,7 @@
         const otherMeal = meal==='comida' ? 'cena' : 'comida';
         const otherMain = dishById(days[i][otherMeal].main);
         if (pass===0 && otherMain && otherMain.categories.includes('azul')) continue;
+        if (days[i][meal].locked) continue;
         const currentMain = dishById(days[i][meal].main);
         // No se sustituye un plato de legumbre (se perdería la legumbre mínima de la semana).
         if (currentMain && !isRealFish(currentMain) && !isLegume(currentMain)){
@@ -1031,7 +1173,7 @@
           if (candidate){
             usedMainIds.delete(days[i][meal].main);
             const excludeCats = otherHasCarb ? ['amarillo'] : [];
-            days[i][meal] = buildSlot(candidate, pool, days[i][otherMeal].garnish, excludeCats, !slotHasVeg(days[i][otherMeal]));
+            days[i][meal] = buildSlot(candidate, pool, [days[i][otherMeal].garnish, days[i][otherMeal].main], excludeCats, !slotHasVeg(days[i][otherMeal]));
             usedMainIds.add(candidate.id);
             fishCount++;
           }
@@ -1051,84 +1193,148 @@
     const allDays = DAY_NAMES.map((_,i)=>i);
     const fishTarget = prefs.fishFrequency;
     const legTarget = prefs.legumeFrequency;
-    const fishDays = shuffle(allDays).slice(0, fishTarget);
+    // Platos fijados con el candado: se quedan en su día y comida, y cuentan para todas las reglas.
+    const prevDays = (currentMenu && currentMenu.days) || [];
+    const lockedAt = (i, meal) => {
+      const s = prevDays[i] && prevDays[i][meal];
+      return (s && s.locked && dishById(s.main)) ? {...s} : null;
+    };
+    const futureLocked = (i, includeCenaToday) => {
+      const ids = [];
+      if (includeCenaToday){ const s = lockedAt(i, 'cena'); if (s) ids.push(s.main); }
+      for (let j = i + 1; j < DAY_NAMES.length; j++) ['comida','cena'].forEach(m => { const s = lockedAt(j, m); if (s) ids.push(s.main); });
+      return ids;
+    };
+    let tiktokUsedThisWeek = false;
+    let legCount = 0;
+    allDays.forEach(i => ['comida','cena'].forEach(m => {
+      const s = lockedAt(i, m); if (!s) return;
+      const d = dishById(s.main);
+      usedThisWeek[d.id] = (usedThisWeek[d.id]||0) + 1;
+      if (d.special === 'tiktok') tiktokUsedThisWeek = true;
+      if (isLegume(d)) legCount++;
+    }));
+    // Los platos fijados ya cubren parte del pescado y la legumbre de la semana.
+    let lockedFish = 0, lockedLeg = 0;
+    allDays.forEach(i => ['comida','cena'].forEach(m => {
+      const s = lockedAt(i, m); if (!s) return;
+      const d = dishById(s.main);
+      if (isRealFish(d)) lockedFish++;
+      if (isLegume(d)) lockedLeg++;
+    }));
+    const dayLockedCats = i => ['comida','cena'].flatMap(m => { const s = lockedAt(i, m); return s ? slotCategories(s) : []; });
+    const fishCandidates = allDays.filter(i => !(lockedAt(i,'comida') && lockedAt(i,'cena')) && !dayLockedCats(i).includes('azul'));
+    const fishDays = shuffle(fishCandidates).slice(0, Math.max(0, fishTarget - lockedFish));
     // Días con legumbre obligatoria en la comida (tantos como el mínimo semanal),
     // elegidos preferentemente entre los días que no son de pescado.
-    const legDays = shuffle(allDays.filter(i => !fishDays.includes(i))).concat(shuffle(fishDays)).slice(0, legTarget);
+    const legCandidates = allDays.filter(i => !lockedAt(i,'comida'));
+    const legDays = shuffle(legCandidates.filter(i => !fishDays.includes(i))).concat(shuffle(fishDays.filter(i => legCandidates.includes(i))))
+      .slice(0, Math.max(0, legTarget - lockedLeg));
     // Cada día de pescado lo pone en la comida o en la cena (en un día de legumbre, siempre en la cena).
     // Casi siempre en la comida porque la cena ya favorece el pescado por sí sola: así queda ~50/50.
     const fishMeal = {};
-    fishDays.forEach(i => { fishMeal[i] = (legDays.includes(i) || Math.random() < FISH_DINNER_SHARE) ? 'cena' : 'comida'; });
+    fishDays.forEach(i => {
+      if (lockedAt(i,'comida')) fishMeal[i] = 'cena';
+      else if (lockedAt(i,'cena')) fishMeal[i] = 'comida';
+      else fishMeal[i] = (legDays.includes(i) || Math.random() < FISH_DINNER_SHARE) ? 'cena' : 'comida';
+    });
+    // Si la cena fijada obliga a poner el pescado en la comida de un día de legumbre, la legumbre va a otro día.
+    legDays.forEach((d, k) => {
+      if (fishMeal[d] !== 'comida') return;
+      const alt = shuffle(legCandidates).find(j => !legDays.includes(j) && (fishMeal[j] !== 'comida' || !lockedAt(j,'cena')));
+      if (alt === undefined) return;
+      legDays[k] = alt;
+      if (fishMeal[alt] === 'comida') fishMeal[alt] = 'cena';
+    });
     const days = [];
-    let tiktokUsedThisWeek = false;
-    let legCount = 0;
     // Si quedan tan pocos pescados sin usar como días de pescado pendientes, se "reservan":
     // se evitan en los demás huecos para no tener que repetir pescado en la semana.
     const realFishIds = pool.filter(isRealFish).map(d=>d.id);
     const fishReserve = (pendingForced) =>
       realFishIds.filter(id => !usedThisWeek[id]).length <= pendingForced ? realFishIds : [];
-    const weekMeat = () => meatCounts(days.flatMap(d=>[d.comida.main, d.cena.main]));
 
     for (let i=0;i<DAY_NAMES.length;i++){
       const needsFish = fishDays.includes(i);
       const laterFishDays = fishDays.filter(j => j > i).length;
+      const lockedComida = lockedAt(i, 'comida');
+      const lockedCena = lockedAt(i, 'cena');
+      const soFar = days.flatMap(d=>[d.comida.main, d.cena.main]);
 
-      let comidaPool = mainEligiblePool(pool, 'comida');
-      const weekMains = days.flatMap(d=>[d.comida.main, d.cena.main]);
-      // Días de pescado que aún faltan por cubrir (sin contar el hueco que se está eligiendo).
-      const pendingAfterComida = laterFishDays + (fishMeal[i] === 'cena' ? 1 : 0);
-      const excludeIds1 = Array.from(new Set([...usedThisWeekExclusions(usedThisWeek), ...meatExclusions(weekMeat()), ...eggExclusions(weekMains),
-        ...(fishMeal[i] === 'comida' ? [] : fishCapExclusions(weekMains, pendingAfterComida, fishTarget))]));
-      if (fishMeal[i] === 'comida'){
-        const fishOnly = comidaPool.filter(isRealFish);
-        if (fishOnly.length) comidaPool = fishOnly;
-      } else if (legDays.includes(i) && legCount < legTarget){
-        // Si no queda ninguna legumbre que cumpla todas las reglas, se permite repetir "familia"
-        // (p. ej. dos guisos de garbanzos) antes que saltarse el tope de carne o de huevos.
-        const capIds = new Set([...meatExclusions(weekMeat()), ...eggExclusions(weekMains)]);
-        const allLeg = comidaPool.filter(isLegume);
-        const tiers = [
-          allLeg.filter(d => !excludeIds1.includes(d.id)),
-          allLeg.filter(d => !usedThisWeek[d.id] && !capIds.has(d.id)),
-          allLeg.filter(d => !capIds.has(d.id)),
-          allLeg
-        ];
-        const legOnly = tiers.find(t => t.length);
-        if (legOnly) comidaPool = legOnly;
+      let comidaSlot;
+      if (lockedComida){
+        comidaSlot = lockedComida;
+      } else {
+        let comidaPool = mainEligiblePool(pool, 'comida');
+        // Para los topes se cuentan también los platos fijados de lo que queda de semana.
+        const weekMains = soFar.concat(futureLocked(i, true));
+        // Días de pescado que aún faltan por cubrir (sin contar el hueco que se está eligiendo).
+        const pendingAfterComida = laterFishDays + (fishMeal[i] === 'cena' ? 1 : 0);
+        const excludeIds1 = Array.from(new Set([...usedThisWeekExclusions(usedThisWeek), ...(lockedCena && lockedCena.garnish ? [lockedCena.garnish] : []), ...meatExclusions(meatCounts(weekMains)), ...eggExclusions(weekMains),
+          ...(fishMeal[i] === 'comida' ? [] : fishCapExclusions(weekMains, pendingAfterComida, fishTarget))]));
+        // Si la cena está fijada, la comida se elige respetándola (sin repetir carbohidrato, carne ni pescado).
+        const comidaExcludeCats = fishMeal[i] === 'cena' ? ['azul'] : [];
+        if (lockedCena) slotCategories(lockedCena).forEach(c => { if ((c === 'amarillo' || c === 'rojo' || c === 'azul') && !comidaExcludeCats.includes(c)) comidaExcludeCats.push(c); });
+        const catsOk = d => !d.categories.some(c => comidaExcludeCats.includes(c));
+        if (fishMeal[i] === 'comida'){
+          const fishOnly = comidaPool.filter(isRealFish);
+          if (fishOnly.length) comidaPool = fishOnly;
+        } else if (legDays.includes(i) && legCount < legTarget){
+          // Si no queda ninguna legumbre que cumpla todas las reglas, se permite repetir "familia"
+          // (p. ej. dos guisos de garbanzos) antes que saltarse el tope de carne o de huevos.
+          const capIds = new Set([...meatExclusions(meatCounts(weekMains)), ...eggExclusions(weekMains)]);
+          const allLeg = comidaPool.filter(isLegume);
+          const base = [
+            allLeg.filter(d => !excludeIds1.includes(d.id)),
+            allLeg.filter(d => !usedThisWeek[d.id] && !capIds.has(d.id)),
+            allLeg.filter(d => !capIds.has(d.id)),
+            allLeg
+          ];
+          // Antes que repetir carbohidrato con una cena fijada, se permite repetir familia.
+          const tiers = lockedCena ? base.slice(0, 3).map(t => t.filter(catsOk)).concat(base) : base;
+          const legOnly = tiers.find(t => t.length);
+          if (legOnly) comidaPool = legOnly;
+        }
+        const needVegAtComida = !!lockedCena && !slotHasVeg(lockedCena);
+        if (needVegAtComida) comidaPool = vegFriendly(comidaPool, excludeIds1, comidaExcludeCats);
+        const comidaSoft = fishMeal[i] === 'comida' ? prevMainIds
+          : prevMainIds.concat(fishReserve(laterFishDays + (needsFish ? 1 : 0)));
+        const comidaMain = chooseDish(comidaPool, {excludeIds: excludeIds1, softExcludeIds: comidaSoft, excludeCategories: comidaExcludeCats, mealType:'comida'});
+        usedThisWeek[comidaMain.id] = (usedThisWeek[comidaMain.id]||0)+1;
+        if (isLegume(comidaMain)) legCount++;
+        comidaSlot = buildSlot(comidaMain, pool, lockedCena ? [lockedCena.garnish, lockedCena.main] : null, comidaExcludeCats.filter(c => c === 'amarillo'), needVegAtComida);
       }
-      const comidaSoft = fishMeal[i] === 'comida' ? prevMainIds
-        : prevMainIds.concat(fishReserve(laterFishDays + (needsFish ? 1 : 0)));
-      // Si el pescado de hoy va en la cena, se evita pescado (p. ej. atún en lata) en la comida.
-      const comidaMain = chooseDish(comidaPool, {excludeIds: excludeIds1, softExcludeIds: comidaSoft, excludeCategories: fishMeal[i] === 'cena' ? ['azul'] : [], mealType:'comida'});
-      usedThisWeek[comidaMain.id] = (usedThisWeek[comidaMain.id]||0)+1;
-      if (isLegume(comidaMain)) legCount++;
-      const comidaSlot = buildSlot(comidaMain, pool, null);
+      const comidaMain = dishById(comidaSlot.main);
       const comidaCats = slotCategories(comidaSlot);
-      const needVegAtCena = !slotHasVeg(comidaSlot);
 
-      let cenaPool = mainEligiblePool(pool, 'cena');
-      if (tiktokUsedThisWeek) cenaPool = cenaPool.filter(d=>d.special!=='tiktok');
-      const cenaForcedFish = needsFish && !isRealFish(comidaMain);
-      if (cenaForcedFish){
-        const fishOnly = cenaPool.filter(isRealFish);
-        if (fishOnly.length) cenaPool = fishOnly;
+      let cenaSlot;
+      if (lockedCena){
+        cenaSlot = lockedCena;
+      } else {
+        const needVegAtCena = !slotHasVeg(comidaSlot);
+        let cenaPool = mainEligiblePool(pool, 'cena');
+        if (tiktokUsedThisWeek) cenaPool = cenaPool.filter(d=>d.special!=='tiktok');
+        const cenaForcedFish = needsFish && !isRealFish(comidaMain);
+        if (cenaForcedFish){
+          const fishOnly = cenaPool.filter(isRealFish);
+          if (fishOnly.length) cenaPool = fishOnly;
+        }
+        const weekMains2 = soFar.concat([comidaMain.id], futureLocked(i, false));
+        const excludeIds2 = Array.from(new Set([...usedThisWeekExclusions(usedThisWeek), comidaMain.id, ...(comidaSlot.garnish ? [comidaSlot.garnish] : []), ...meatExclusions(meatCounts(weekMains2)), ...eggExclusions(weekMains2),
+          ...(cenaForcedFish ? [] : fishCapExclusions(weekMains2, laterFishDays, fishTarget))]));
+        // Sin dos carbohidratos, dos carnes ni dos pescados el mismo día (salvo pescado obligatorio en la cena).
+        const cenaExcludeCats = comidaCats.filter(c => c === 'amarillo' || c === 'rojo' || (c === 'azul' && !cenaForcedFish));
+        if (needVegAtCena) cenaPool = vegFriendly(cenaPool, excludeIds2, cenaExcludeCats);
+        const cenaMain = chooseDish(cenaPool, {
+          excludeIds: excludeIds2,
+          softExcludeIds: cenaForcedFish ? prevMainIds : prevMainIds.concat(fishReserve(laterFishDays)),
+          excludeCategories: cenaExcludeCats,
+          mealType:'cena'
+        });
+        usedThisWeek[cenaMain.id] = (usedThisWeek[cenaMain.id]||0)+1;
+        if (cenaMain.special === 'tiktok') tiktokUsedThisWeek = true;
+        if (isLegume(cenaMain)) legCount++;
+        cenaSlot = buildSlot(cenaMain, pool, [comidaSlot.garnish, comidaMain.id], cenaExcludeCats, needVegAtCena);
       }
-      const meatNow = meatCounts(days.flatMap(d=>[d.comida.main, d.cena.main]).concat([comidaMain.id]));
-      const excludeIds2 = Array.from(new Set([...usedThisWeekExclusions(usedThisWeek), comidaMain.id, ...meatExclusions(meatNow), ...eggExclusions(weekMains.concat([comidaMain.id])),
-        ...(cenaForcedFish ? [] : fishCapExclusions(weekMains.concat([comidaMain.id]), laterFishDays, fishTarget))]));
-      // Sin dos carbohidratos, dos carnes ni dos pescados el mismo día (salvo pescado obligatorio en la cena).
-      const cenaExcludeCats = comidaCats.filter(c => c === 'amarillo' || c === 'rojo' || (c === 'azul' && !cenaForcedFish));
-      if (needVegAtCena) cenaPool = vegFriendly(cenaPool, excludeIds2, cenaExcludeCats);
-      const cenaMain = chooseDish(cenaPool, {
-        excludeIds: excludeIds2,
-        softExcludeIds: cenaForcedFish ? prevMainIds : prevMainIds.concat(fishReserve(laterFishDays)),
-        excludeCategories: cenaExcludeCats,
-        mealType:'cena'
-      });
-      usedThisWeek[cenaMain.id] = (usedThisWeek[cenaMain.id]||0)+1;
-      if (cenaMain.special === 'tiktok') tiktokUsedThisWeek = true;
-      if (isLegume(cenaMain)) legCount++;
-      const cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish, cenaExcludeCats, needVegAtCena);
       fixDayVeg(comidaSlot, cenaSlot, pool);
 
       days.push({day: DAY_NAMES[i], comida: comidaSlot, cena: cenaSlot});
@@ -1138,67 +1344,66 @@
 
     previousMenu = currentMenu;
     currentMenu = {days, season: prefs.season};
-    dayAttempts = DAY_NAMES.map(()=>0);
+    mealAttempts = {};
     storageSet('currentMenu', currentMenu);
     storageSet('previousMenu', previousMenu);
     renderWeek();
   }
 
-  function regenerateDay(i){
-    if (!currentMenu) return;
-    dayAttempts[i] = (dayAttempts[i]||0) + 1;
+  // ---- Cambiar solo la comida o solo la cena de un día ----
+  // Los 2 primeros cambios respetan todas las reglas; al 3º se elige libremente (respetando solo
+  // guarnición, comida/cena y el límite de TikTok/caprichos), igual que antes "Cambiar día".
+  let mealAttempts = {};
+  function regenerateMeal(i, meal){
+    if (!currentMenu || !currentMenu.days[i]) return;
+    const day = currentMenu.days[i];
+    if (day[meal] && day[meal].locked) return;
+    const key = i + '-' + meal;
+    mealAttempts[key] = (mealAttempts[key] || 0) + 1;
+    const free = mealAttempts[key] >= 3;
     const pool = seasonPool();
-    const free = dayAttempts[i] >= 3;
+    const other = meal === 'comida' ? 'cena' : 'comida';
+    const otherSlot = day[other];
     const prevMainIds = previousMenu ? previousMenu.days.flatMap(d=>[d.comida.main, d.cena.main]) : [];
 
-    const otherDaysUsed = {};
+    const usedElsewhere = {};
     const otherMainIds = [];
-    currentMenu.days.forEach((d,idx)=>{
-      if (idx!==i){
-        otherDaysUsed[d.comida.main] = (otherDaysUsed[d.comida.main]||0)+1;
-        otherDaysUsed[d.cena.main] = (otherDaysUsed[d.cena.main]||0)+1;
-        otherMainIds.push(d.comida.main, d.cena.main);
-      }
-    });
-    const tiktokUsedElsewhere = currentMenu.days.some((d,idx)=> idx!==i && dishHasSpecial(d.cena.main,'tiktok'));
+    currentMenu.days.forEach((d, idx) => ['comida','cena'].forEach(m => {
+      if (idx === i && m === meal) return;
+      usedElsewhere[d[m].main] = (usedElsewhere[d[m].main] || 0) + 1;
+      otherMainIds.push(d[m].main);
+    }));
+    const tiktokElsewhere = otherMainIds.some(id => dishHasSpecial(id, 'tiktok'));
+    let basePool = mainEligiblePool(pool, meal);
+    if (tiktokElsewhere) basePool = basePool.filter(d => d.special !== 'tiktok');
 
-    const comidaBasePool = mainEligiblePool(pool, 'comida');
-    let cenaBasePool = mainEligiblePool(pool, 'cena');
-    if (tiktokUsedElsewhere) cenaBasePool = cenaBasePool.filter(d=>d.special!=='tiktok');
-
-    let comidaSlot, cenaSlot;
+    let slot;
     if (free){
-      const comidaMain = comidaBasePool[Math.floor(Math.random()*comidaBasePool.length)];
-      comidaSlot = buildSlot(comidaMain, pool, null);
-      const cenaChoices = cenaBasePool.filter(d => d.id !== comidaMain.id);
-      const cenaPickFrom = cenaChoices.length ? cenaChoices : cenaBasePool;
-      const cenaMain = cenaPickFrom[Math.floor(Math.random()*cenaPickFrom.length)];
-      cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish);
-      dayAttempts[i] = 0;
+      const choices = basePool.filter(d => !otherSlot || d.id !== otherSlot.main);
+      const pickFrom = choices.length ? choices : basePool;
+      const main = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+      slot = buildSlot(main, pool, otherSlot ? [otherSlot.garnish, otherSlot.main] : null);
+      mealAttempts[key] = 0;
     } else {
-      const excludeIds = Array.from(new Set([...usedThisWeekExclusions(otherDaysUsed), ...meatExclusions(meatCounts(otherMainIds)), ...eggExclusions(otherMainIds),
-        ...fishCapExclusions(otherMainIds, 0, prefs.fishFrequency)]));
-      const comidaMain = chooseDish(comidaBasePool, {excludeIds, softExcludeIds: prevMainIds, mealType:'comida'});
-      comidaSlot = buildSlot(comidaMain, pool, null);
-      const comidaCats = slotCategories(comidaSlot);
-      const needVegAtCena = !slotHasVeg(comidaSlot);
-      const excludeIds2 = Array.from(new Set([...usedThisWeekExclusions({...otherDaysUsed, [comidaMain.id]: 1}),
-        ...meatExclusions(meatCounts(otherMainIds.concat([comidaMain.id]))), ...eggExclusions(otherMainIds.concat([comidaMain.id])),
-        ...fishCapExclusions(otherMainIds.concat([comidaMain.id]), 0, prefs.fishFrequency)]));
-      const cenaExcludeCats = comidaCats.filter(c => c === 'amarillo' || c === 'rojo' || c === 'azul');
-      const cenaPool = needVegAtCena ? vegFriendly(cenaBasePool, excludeIds2, cenaExcludeCats) : cenaBasePool;
-      const cenaMain = chooseDish(cenaPool, {
-        excludeIds: excludeIds2,
-        softExcludeIds: prevMainIds,
-        excludeCategories: cenaExcludeCats,
-        mealType:'cena'
-      });
-      cenaSlot = buildSlot(cenaMain, pool, comidaSlot.garnish, cenaExcludeCats, needVegAtCena);
-      fixDayVeg(comidaSlot, cenaSlot, pool);
+      const excludeIds = Array.from(new Set([...usedThisWeekExclusions(usedElsewhere), ...meatExclusions(meatCounts(otherMainIds)),
+        ...eggExclusions(otherMainIds), ...fishCapExclusions(otherMainIds, 0, prefs.fishFrequency), ...(otherSlot && otherSlot.garnish ? [otherSlot.garnish] : [])]));
+      const otherCats = otherSlot ? slotCategories(otherSlot) : [];
+      const excludeCats = otherCats.filter(c => c === 'amarillo' || c === 'rojo' || c === 'azul');
+      const needVeg = !!otherSlot && !slotHasVeg(otherSlot);
+      const candPool = needVeg ? vegFriendly(basePool, excludeIds, excludeCats) : basePool;
+      const main = chooseDish(candPool, { excludeIds, softExcludeIds: prevMainIds, excludeCategories: excludeCats, mealType: meal });
+      slot = buildSlot(main, pool, otherSlot ? [otherSlot.garnish, otherSlot.main] : null, excludeCats.filter(c => c === 'amarillo'), needVeg);
     }
+    day[meal] = slot;
+    if (!free) fixDayVeg(day.comida, day.cena, pool);
+    storageSet('currentMenu', currentMenu);
+    renderWeek();
+  }
 
-    currentMenu.days[i].comida = comidaSlot;
-    currentMenu.days[i].cena = cenaSlot;
+  function toggleLock(i, meal){
+    const slot = currentMenu && currentMenu.days[i] && currentMenu.days[i][meal];
+    if (!slot) return;
+    if (slot.locked) delete slot.locked; else slot.locked = true;
     storageSet('currentMenu', currentMenu);
     renderWeek();
   }
@@ -1230,12 +1435,33 @@
     if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  function attemptDotsHtml(i){
+  function attemptDotsHtml(i, meal){
+    const n = mealAttempts[i + '-' + meal] || 0;
     let html = '';
     for (let k=0;k<3;k++){
-      html += `<span class="${k < dayAttempts[i] ? 'filled':''}"></span>`;
+      html += `<span class="${k < n ? 'filled':''}"></span>`;
     }
     return html;
+  }
+
+  function mealRowHtml(i, meal, slot){
+    const info = slotDisplay(slot);
+    const locked = !!slot.locked;
+    return `
+          <div class="meal-row${locked ? ' is-locked' : ''}" data-day="${i}" data-meal="${meal}">
+            <span class="meal-label">${meal === 'comida' ? 'Comida' : 'Cena'}</span>
+            <div class="meal-body">
+              <div class="dish-name">${info.name}</div>
+              <div class="dish-dots">${dotsHtml(info.cats)}</div>
+            </div>
+            <div class="meal-actions">
+              <button class="icon-btn lock-btn${locked ? ' locked' : ''}" data-day="${i}" data-meal="${meal}" aria-label="${locked ? 'Soltar plato' : 'Fijar plato'}" title="${locked ? 'Fijado: se mantiene al generar el menú' : 'Fijar este plato'}">${locked ? '🔒' : '🔓'}</button>
+              <div class="change-wrap">
+                <button class="icon-btn change-btn" data-day="${i}" data-meal="${meal}" aria-label="Cambiar plato" ${locked ? 'disabled' : ''}>🔄</button>
+                <div class="attempt-dots">${attemptDotsHtml(i, meal)}</div>
+              </div>
+            </div>
+          </div>`;
   }
 
   function renderWeek(){
@@ -1244,41 +1470,24 @@
       week.innerHTML = '<div class="empty-state">Todavía no hay menú. Pulsa «Generar menú semanal» para crear el primero.</div>';
       return;
     }
-    week.innerHTML = currentMenu.days.map((day, i)=>{
-      const comidaInfo = slotDisplay(day.comida);
-      const cenaInfo = slotDisplay(day.cena);
-      return `
+    week.innerHTML = currentMenu.days.map((day, i)=>`
         <section class="day-card" id="day-${i}">
           <div class="day-card-head">
             <h2 class="day-name">${day.day}</h2>
-            <div class="change-wrap">
-              <button class="change-btn" data-day="${i}">🔄 Cambiar día</button>
-              <div class="attempt-dots">${attemptDotsHtml(i)}</div>
-            </div>
-          </div>
-          <div class="meal-row" data-day="${i}" data-meal="comida">
-            <span class="meal-label">Comida</span>
-            <div class="meal-body">
-              <div class="dish-name">${comidaInfo.name}</div>
-              <div class="dish-dots">${dotsHtml(comidaInfo.cats)}</div>
-            </div>
-          </div>
-          <div class="meal-row" data-day="${i}" data-meal="cena">
-            <span class="meal-label">Cena</span>
-            <div class="meal-body">
-              <div class="dish-name">${cenaInfo.name}</div>
-              <div class="dish-dots">${dotsHtml(cenaInfo.cats)}</div>
-            </div>
-          </div>
+          </div>${mealRowHtml(i, 'comida', day.comida)}${mealRowHtml(i, 'cena', day.cena)}
         </section>
-      `;
-    }).join('');
+      `).join('');
 
     week.querySelectorAll('.change-btn').forEach(btn=>{
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
-        const i = parseInt(btn.getAttribute('data-day'), 10);
-        regenerateDay(i);
+        regenerateMeal(parseInt(btn.getAttribute('data-day'), 10), btn.getAttribute('data-meal'));
+      });
+    });
+    week.querySelectorAll('.lock-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        toggleLock(parseInt(btn.getAttribute('data-day'), 10), btn.getAttribute('data-meal'));
       });
     });
 
@@ -1361,9 +1570,24 @@
     return `<div class="hint" style="font-weight:800;color:var(--ink);margin:14px 0 4px;">Preparación</div><div style="white-space:pre-line;font-size:0.88rem;line-height:1.45;">${escapeHtml(dish.instructions)}</div>`;
   }
 
+  let ratingDishId = null;
+  function renderRateRow(){
+    const v = ratings[ratingDishId] || 0;
+    document.querySelectorAll('#rateRow button').forEach(b => b.classList.toggle('selected', parseInt(b.getAttribute('data-r'),10) === v));
+  }
+  document.getElementById('rateRow').addEventListener('click', (e)=>{
+    const b = e.target.closest('button');
+    if (!b || !ratingDishId) return;
+    setRating(ratingDishId, parseInt(b.getAttribute('data-r'),10));
+    renderRateRow();
+  });
+
   function openIngredientsModal(slot){
     const main = dishById(slot.main);
     if (!main) return;
+    ratingDishId = main.id;
+    document.getElementById('rateLabel').textContent = slot.garnish ? `¿Os gusta ${main.name.charAt(0).toLowerCase() + main.name.slice(1)}?` : '¿Os gusta este plato?';
+    renderRateRow();
     const garnish = slot.garnish ? dishById(slot.garnish) : null;
     document.getElementById('ingredientsDishName').textContent = garnish ? `${main.name} con ${garnish.name}` : main.name;
     document.getElementById('ingredientsDishDots').innerHTML = dotsHtml(slotCategories(slot));
@@ -1397,19 +1621,68 @@
     });
   }
 
+  // Las cantidades del formulario se ven (y se escriben) para las personas elegidas arriba;
+  // cada ingrediente guarda para cuántas personas es su cantidad y la app la escala al mostrarla.
+  let formServings = 2;
+  let editingIngIdx = null;
+  let formRating = 0;
   function renderIngredientChips(){
     const el = document.getElementById('ingredientChips');
     el.innerHTML = ingredientDraft.map((ing, idx)=>
-      `<span class="ing-chip">${escapeHtml(formatIngredient(ing, ing.baseServings || 2))}<button data-idx="${idx}">✕</button></span>`
+      `<span class="ing-chip${idx === editingIngIdx ? ' editing' : ''}"><span class="ing-edit" data-idx="${idx}">${escapeHtml(formatIngredient(ing, formServings))}</span><button data-idx="${idx}" aria-label="Quitar">✕</button></span>`
     ).join('');
     el.querySelectorAll('button').forEach(b=>{
       b.addEventListener('click', ()=>{
         const idx = parseInt(b.getAttribute('data-idx'),10);
         ingredientDraft.splice(idx,1);
+        if (editingIngIdx === idx) resetIngredientInputs();
+        else if (editingIngIdx !== null && editingIngIdx > idx) editingIngIdx--;
         renderIngredientChips();
       });
     });
+    el.querySelectorAll('.ing-edit').forEach(t=>{
+      t.addEventListener('click', ()=>{
+        const idx = parseInt(t.getAttribute('data-idx'),10);
+        const ing = ingredientDraft[idx];
+        editingIngIdx = idx;
+        document.getElementById('ingredientInput').value = ing.name;
+        const n = scaledAmount(ing, formServings);
+        document.getElementById('ingredientAmount').value = n === null ? '' : String(n).replace('.', ',');
+        document.getElementById('ingredientUnit').value = ing.unit || 'g';
+        document.getElementById('addIngredientBtn').textContent = 'Guardar';
+        renderIngredientChips();
+        document.getElementById('ingredientInput').focus();
+      });
+    });
   }
+  function resetIngredientInputs(){
+    editingIngIdx = null;
+    document.getElementById('ingredientInput').value = '';
+    document.getElementById('ingredientAmount').value = '';
+    document.getElementById('addIngredientBtn').textContent = 'Añadir';
+  }
+  function renderFormServings(){
+    document.querySelectorAll('#formServingsStepper button').forEach(b=>
+      b.classList.toggle('selected', parseInt(b.getAttribute('data-val'),10) === formServings));
+  }
+  document.getElementById('formServingsStepper').addEventListener('click', (e)=>{
+    const b = e.target.closest('button');
+    if (!b) return;
+    formServings = parseInt(b.getAttribute('data-val'),10);
+    renderFormServings();
+    renderIngredientChips();
+  });
+  function renderFormRating(){
+    document.querySelectorAll('#formRateRow button').forEach(b=>
+      b.classList.toggle('selected', parseInt(b.getAttribute('data-r'),10) === formRating));
+  }
+  document.getElementById('formRateRow').addEventListener('click', (e)=>{
+    const b = e.target.closest('button');
+    if (!b) return;
+    const v = parseInt(b.getAttribute('data-r'),10);
+    formRating = formRating === v ? 0 : v;
+    renderFormRating();
+  });
 
   function dishTypeLabel(d){
     let label = (d.types||['standalone']).map(t => TYPE_LABELS[t]).join(' + ');
@@ -1461,7 +1734,7 @@
     el.innerHTML += list.map(d=>`
       <div class="dish-list-item" data-id="${d.id}" style="cursor:pointer;">
         <div class="info">
-          <div class="name">${escapeHtml(d.name)}</div>
+          <div class="name">${escapeHtml(d.name)}${ratings[d.id] === 1 ? '<span class="rate-tag">👍</span>' : ratings[d.id] === -1 ? '<span class="rate-tag">👎</span>' : ''}</div>
           <div class="dish-dots">${dotsHtml(d.categories)}</div>
           <div class="ings">${escapeHtml(d.ingredients.map(i=>formatIngredient(i, prefs.servings)).join(', '))}</div>
           <div class="season-tag">${seasonLabel[d.season] || 'Todo el año'} · ${dishTypeLabel(d)}</div>
@@ -1488,8 +1761,10 @@
     const opt = e.target.closest('.opt');
     if (!opt) return;
     prefs.season = opt.getAttribute('data-season');
+    prefs.seasonAuto = false;
     storageSet('preferences', prefs);
     renderSeasonToggle();
+    renderPrefsExtras();
   });
 
   document.getElementById('prefsBtn').addEventListener('click', ()=>{
@@ -1497,7 +1772,42 @@
     renderFishStepper();
     renderLegumeStepper();
     renderServingsStepper();
+    renderPrefsExtras();
     document.getElementById('prefsOverlay').classList.add('show');
+  });
+  function renderPrefsExtras(){
+    document.querySelectorAll('#seasonModeStepper button').forEach(b=>
+      b.classList.toggle('selected', (b.getAttribute('data-val') === 'auto') === !!prefs.seasonAuto));
+    document.querySelectorAll('#fontSizeStepper button').forEach(b=>
+      b.classList.toggle('selected', b.getAttribute('data-val') === prefs.fontSize));
+  }
+  document.getElementById('seasonModeStepper').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    prefs.seasonAuto = btn.getAttribute('data-val') === 'auto';
+    if (prefs.seasonAuto) prefs.season = defaultSeason();
+    storageSet('preferences', prefs);
+    renderSeasonToggle();
+    renderPrefsExtras();
+  });
+  document.getElementById('fontSizeStepper').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    prefs.fontSize = btn.getAttribute('data-val');
+    storageSet('preferences', prefs);
+    applyFontSize();
+    renderPrefsExtras();
+  });
+  document.getElementById('restoreDishesBtn').addEventListener('click', async ()=>{
+    if (!confirm('¿Restaurar los platos originales? Vuelven los que borraste y se deshacen los cambios que hiciste en ellos. Los platos que has añadido tú se conservan.')) return;
+    const mine = dishes.filter(d => isCustomDish(d));
+    dishes = DEFAULT_DISHES.map(d => ({...d})).concat(mine);
+    await storageSet('dishes', dishes);
+    await storageSet('dishesVersion', DISHES_VERSION);
+    await storageSet('deletedDefaults', []);
+    document.getElementById('appVersion').textContent = `Versión de la app: platos v${DISHES_VERSION} · ${dishes.length} platos`;
+    renderWeek();
+    alert('Listo: platos originales restaurados.');
   });
   document.getElementById('closePrefs').addEventListener('click', ()=>{
     document.getElementById('prefsOverlay').classList.remove('show');
@@ -1542,6 +1852,9 @@
     document.querySelectorAll('#catPicker .cat-toggle').forEach(el=>{
       el.classList.toggle('selected', selectedCats.includes(el.getAttribute('data-cat')));
     });
+    selectedMeat = dish ? (dish.meat || (dish.categories.includes('rojo') ? '' : 'ave')) : 'ave';
+    selectedCanned = !!(dish && dish.cannedFish);
+    renderMeatCannedFields();
     document.querySelectorAll('#typePicker .cat-toggle').forEach(el=>{
       el.classList.toggle('selected', selectedTypes.includes(el.getAttribute('data-t')));
     });
@@ -1551,10 +1864,23 @@
     document.querySelectorAll('#mealPicker .cat-toggle').forEach(el=>{
       el.classList.toggle('selected', selectedMeals.includes(el.getAttribute('data-m')));
     });
+    formServings = 2;
+    resetIngredientInputs();
+    document.getElementById('ingredientUnit').value = 'g';
+    renderFormServings();
+    formRating = dish ? (ratings[dish.id] || 0) : 0;
+    renderFormRating();
     renderIngredientChips();
     document.getElementById('saveDishBtn').textContent = dish ? 'Guardar cambios' : 'Guardar plato';
     document.getElementById('deleteDishBtn').style.display = dish ? 'block' : 'none';
     document.getElementById('addDishOverlay').classList.add('show');
+  }
+
+  function renderMeatCannedFields(){
+    document.getElementById('meatTypeField').hidden = !selectedCats.includes('rojo');
+    document.getElementById('cannedField').hidden = !selectedCats.includes('azul');
+    document.querySelectorAll('#meatTypePicker .cat-toggle').forEach(el => el.classList.toggle('selected', el.getAttribute('data-meat') === selectedMeat));
+    document.querySelectorAll('#cannedPicker .cat-toggle').forEach(el => el.classList.toggle('selected', (el.getAttribute('data-canned') === '1') === selectedCanned));
   }
 
   function closeDishFormReturning(){
@@ -1582,6 +1908,19 @@
       selectedCats.push(cat);
       el.classList.add('selected');
     }
+    renderMeatCannedFields();
+  });
+  document.getElementById('meatTypePicker').addEventListener('click', (e)=>{
+    const el = e.target.closest('.cat-toggle');
+    if (!el) return;
+    selectedMeat = el.getAttribute('data-meat');
+    renderMeatCannedFields();
+  });
+  document.getElementById('cannedPicker').addEventListener('click', (e)=>{
+    const el = e.target.closest('.cat-toggle');
+    if (!el) return;
+    selectedCanned = el.getAttribute('data-canned') === '1';
+    renderMeatCannedFields();
   });
   document.getElementById('seasonPicker').addEventListener('click', (e)=>{
     const el = e.target.closest('.cat-toggle');
@@ -1626,15 +1965,26 @@
     }
   });
   document.getElementById('addIngredientBtn').addEventListener('click', ()=>{
-    const input = document.getElementById('ingredientInput');
-    const val = input.value.trim();
-    if (val && !ingredientDraft.some(i => i.name.toLowerCase() === val.toLowerCase())){
-      ingredientDraft.push({ name: val });
-      input.value = '';
-      renderIngredientChips();
-    } else if (val){
-      input.value = '';
+    const val = document.getElementById('ingredientInput').value.trim();
+    if (!val) return;
+    const rawAmount = document.getElementById('ingredientAmount').value.trim().replace(',', '.');
+    const amount = parseFloat(rawAmount);
+    if (rawAmount && !(amount > 0)){ alert('La cantidad tiene que ser un número (por ejemplo 200 o 1,5).'); return; }
+    const ing = { name: val };
+    if (amount > 0){
+      ing.amount = Math.round(amount * 100) / 100;
+      ing.unit = document.getElementById('ingredientUnit').value;
+      ing.baseServings = formServings;
     }
+    const dup = ingredientDraft.findIndex((i, idx) => idx !== editingIngIdx && i.name.toLowerCase() === val.toLowerCase());
+    if (editingIngIdx !== null) ingredientDraft[editingIngIdx] = ing;
+    else if (dup >= 0) ingredientDraft[dup] = ing;
+    else ingredientDraft.push(ing);
+    resetIngredientInputs();
+    renderIngredientChips();
+  });
+  document.getElementById('ingredientAmount').addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('addIngredientBtn').click(); }
   });
   document.getElementById('ingredientInput').addEventListener('keydown', (e)=>{
     if (e.key === 'Enter'){
@@ -1659,6 +2009,10 @@
         dish.types = selectedTypes.slice();
         if (mealRestrictionValue) dish.mealRestriction = mealRestrictionValue; else delete dish.mealRestriction;
         if (instructions) dish.instructions = instructions; else delete dish.instructions;
+        applyMeatCanned(dish);
+        // Un plato original editado se conserva tal cual en futuras actualizaciones de la lista.
+        if (!isCustomDish(dish)) dish.userEdited = true;
+        if ((ratings[dish.id] || 0) !== formRating){ if (formRating) ratings[dish.id] = formRating; else delete ratings[dish.id]; storageSet('ratings', ratings); }
       }
     } else {
       const id = name.toLowerCase()
@@ -1673,15 +2027,31 @@
       };
       if (mealRestrictionValue) newDish.mealRestriction = mealRestrictionValue;
       if (instructions) newDish.instructions = instructions;
+      newDish.custom = true;
+      applyMeatCanned(newDish);
       dishes.push(newDish);
+      if (formRating){ ratings[id] = formRating; storageSet('ratings', ratings); }
     }
     storageSet('dishes', dishes);
     closeDishFormReturning();
     renderWeek();
   });
-  document.getElementById('deleteDishBtn').addEventListener('click', ()=>{
+  function applyMeatCanned(dish){
+    if (selectedCats.includes('rojo') && selectedMeat) dish.meat = selectedMeat; else delete dish.meat;
+    if (selectedCats.includes('azul') && selectedCanned) dish.cannedFish = true; else delete dish.cannedFish;
+  }
+  function isCustomDish(d){ return !!d.custom || /-\d{13}$/.test(d.id); }
+
+  document.getElementById('deleteDishBtn').addEventListener('click', async ()=>{
     if (!editingDishId) return;
     if (confirm('¿Eliminar este plato de la base de datos?')){
+      const gone = dishById(editingDishId);
+      // Si es un plato original, se recuerda para que no vuelva a aparecer al actualizar la app.
+      if (gone && !isCustomDish(gone)){
+        const deleted = await storageGet('deletedDefaults', []);
+        if (!deleted.includes(gone.id)) deleted.push(gone.id);
+        await storageSet('deletedDefaults', deleted);
+      }
       dishes = dishes.filter(d=>d.id !== editingDishId);
       storageSet('dishes', dishes);
       closeDishFormReturning();
@@ -1926,9 +2296,20 @@
       await storageSet('dishes', dishes);
       await storageSet('dishesVersion', DISHES_VERSION);
     } else if (storedVersion < DISHES_VERSION){
+      // Actualización de la lista de platos:
+      // - platos originales: se ponen al día, salvo los que el usuario haya editado (se respetan)
+      //   o borrado (no vuelven);
+      // - platos que se quitaron de la lista original (p. ej. hummus) desaparecen, salvo que se editaran;
+      // - platos creados por el usuario: se conservan siempre.
+      const deleted = new Set(await storageGet('deletedDefaults', []));
       const defaultIds = new Set(DEFAULT_DISHES.map(d=>d.id));
-      const customDishes = dishes.filter(d => !defaultIds.has(d.id));
-      dishes = DEFAULT_DISHES.map(d=>({...d})).concat(customDishes);
+      const stored = new Map(dishes.map(d=>[d.id, d]));
+      const updatedDefaults = DEFAULT_DISHES.filter(d => !deleted.has(d.id)).map(d => {
+        const mine = stored.get(d.id);
+        return (mine && mine.userEdited) ? mine : {...d};
+      });
+      const keep = dishes.filter(d => !defaultIds.has(d.id) && (isCustomDish(d) || d.userEdited));
+      dishes = updatedDefaults.concat(keep);
       await storageSet('dishes', dishes);
       await storageSet('dishesVersion', DISHES_VERSION);
     }
@@ -1943,7 +2324,11 @@
     });
     const loadedPrefs = await storageGet('preferences', null);
     prefs = { ...DEFAULT_PREFS, ...(loadedPrefs || {}) };
-    if (!loadedPrefs) await storageSet('preferences', prefs);
+    // Temporada automática: se pone la del mes actual cada vez que se abre la app.
+    if (prefs.seasonAuto) prefs.season = defaultSeason();
+    await storageSet('preferences', prefs);
+    applyFontSize();
+    ratings = await storageGet('ratings', {}) || {};
     currentMenu = normalizeMenu(await storageGet('currentMenu', null));
     previousMenu = normalizeMenu(await storageGet('previousMenu', null));
 
